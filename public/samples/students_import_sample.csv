@@ -1,0 +1,4 @@
+student_code,name,class_code,exam_number,gender,phone,mobile_phone,address,status,nis,nisn,nik,npwp,religion,village,district,regency,province,motto,social_instagram,social_facebook,social_tiktok
+SIS-1001,Anisa Rahma,X-TKJ-1,UJ-2026-1001,female,0215551001,081234560001,"Jl. Mawar 1",active,1001001,0099988801,3171010101011001,09.999.888.7-101.000,Islam,Cempaka Putih Timur,Cempaka Putih,Jakarta Pusat,DKI Jakarta,"Belajar dan berprestasi",@anisarahma,,@anisa_rahma
+SIS-1002,Fajar Nugraha,X-TKJ-2,UJ-2026-1002,male,0215551002,081234560002,"Jl. Melati 2",active,1001002,0099988802,3171010101011002,09.999.888.7-102.000,Islam,Cempaka Putih Barat,Cempaka Putih,Jakarta Pusat,DKI Jakarta,"Disiplin setiap hari",@fajarnugraha,@fajar.nugraha,
+

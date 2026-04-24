@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layout Cetak Kartu A4</title>
+    <style>
+        :root {
+            --card-width: 85.6mm;
+            --card-height: 54mm;
+            --page-width: 210mm;
+            --page-height: 297mm;
+            --primary: #2563eb;
+            --bg-glass: rgba(255, 255, 255, 0.9);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Container for Preview */
+        .page {
+            width: var(--page-width);
+            height: var(--page-height);
+            background: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: repeat(2, var(--card-width));
+            grid-template-rows: repeat(5, var(--card-height));
+            gap: 5mm 5mm; /* Gap between cards */
+            padding: 9.5mm 16.9mm; /* Centering the grid on A4 */
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Card Card Design */
+        .card {
+            width: var(--card-width);
+            height: var(--card-height);
+            border: 1px solid #e5e7eb;
+            border-radius: 4mm;
+            padding: 4mm;
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+        }
+
+        /* Visual Elements for the Card */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -10mm;
+            right: -10mm;
+            width: 30mm;
+            height: 30mm;
+            background: var(--primary);
+            opacity: 0.05;
+            border-radius: 50%;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 3mm;
+            margin-bottom: 3mm;
+            border-bottom: 0.5pt solid #eee;
+            padding-bottom: 2mm;
+        }
+
+        .logo {
+            width: 8mm;
+            height: 8mm;
+            background: #2563eb;
+            border-radius: 2mm;
+        }
+
+        .inst-name {
+            font-size: 8pt;
+            font-weight: 800;
+            color: #1e293b;
+            text-transform: uppercase;
+        }
+
+        .content {
+            display: flex;
+            gap: 4mm;
+            margin-top: 2mm;
+        }
+
+        .photo-box {
+            width: 20mm;
+            height: 25mm;
+            background: #f1f5f9;
+            border: 1pt solid #e2e8f0;
+            border-radius: 1mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 6pt;
+            color: #94a3b8;
+        }
+
+        .details {
+            flex: 1;
+        }
+
+        .field {
+            margin-bottom: 1.5mm;
+        }
+
+        .label {
+            font-size: 5pt;
+            color: #64748b;
+            margin-bottom: 0.3mm;
+        }
+
+        .value {
+            font-size: 7.5pt;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .barcode {
+            width: 20mm;
+            height: 4mm;
+            background: repeating-linear-gradient(90deg, #000, #000 1pt, #fff 1pt, #fff 3pt);
+            opacity: 0.8;
+        }
+
+        .signature {
+            text-align: center;
+        }
+
+        .sig-img {
+            height: 6mm;
+            margin-bottom: 0.5mm;
+            opacity: 0.7;
+        }
+
+        .sig-name {
+            font-size: 5pt;
+            font-weight: bold;
+            border-bottom: 0.3pt solid #000;
+        }
+
+        /* Print Settings */
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+            .page {
+                box-shadow: none;
+                margin: 0;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+
+        .no-print {
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 18px;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        p {
+            font-size: 14px;
+            color: #4b5563;
+        }
+
+        .btn-print {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-print:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <h1>Preview Layout Cetak Kartu A4</h1>
+        <p>Gunakan tombol di bawah untuk mencetak halaman ini. Pastikan margin di pengaturan print diset ke <strong>None</strong> untuk hasil presisi.</p>
+        <button class="btn-print" onclick="window.print()">Cetak Halaman</button>
+    </div>
+
+    <div class="page">
+        <!-- Render 10 Cards -->
+        <script>
+            const cardCount = 10;
+            const students = [
+                { name: "ANDI GUMILANG", code: "20240001", class: "X-MIPA-1" },
+                { name: "BUDI SANTOSO", code: "20240002", class: "X-MIPA-1" },
+                { name: "CITRA LESTARI", code: "20240003", class: "X-MIPA-2" },
+                { name: "DEWI PERMATA", code: "20240004", class: "X-IPS-1" },
+                { name: "EKO PRASETYO", code: "20240005", class: "X-IPS-2" },
+                { name: "FAREL RAMADHAN", code: "20240006", class: "XI-MIPA-1" },
+                { name: "GITA CAHYANI", code: "20240007", class: "XI-MIPA-3" },
+                { name: "HADI KUSUMA", code: "20240008", class: "XII-IPS-1" },
+                { name: "IKA WULANDARI", code: "20240009", class: "XII-MIPA-2" },
+                { name: "JOKO TINGKIR", code: "20240010", class: "XII-IPS-3" }
+            ];
+
+            const pageContainer = document.querySelector('.page');
+            students.forEach(student => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="header">
+                        <div class="logo"></div>
+                        <div class="inst-name">SMA NEGERI NUSANTARA</div>
+                    </div>
+                    <div class="content">
+                        <div class="photo-box">FOTO</div>
+                        <div class="details">
+                            <div class="field">
+                                <div class="label">NAMA LENGKAP</div>
+                                <div class="value">${student.name}</div>
+                            </div>
+                            <div class="field">
+                                <div class="label">NOMOR INDUK</div>
+                                <div class="value">${student.code}</div>
+                            </div>
+                            <div class="field">
+                                <div class="label">KELAS / JURUSAN</div>
+                                <div class="value">${student.class}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <div class="barcode"></div>
+                        <div class="signature">
+                            <div class="sig-name">Kepala Sekolah</div>
+                        </div>
+                    </div>
+                `;
+                pageContainer.appendChild(card);
+            });
+        </script>
+    </div>
+
+</body>
+</html>
