@@ -31,3 +31,5 @@ Thumbs.db
 coverage/
 .php-cs-fixer.cache
 docker-data/
+hidupkan_server_lokal.md
+jalankan_di_server.md

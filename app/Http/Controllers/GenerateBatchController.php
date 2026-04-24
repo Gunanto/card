@@ -10,8 +10,11 @@ use App\Models\GeneratedCard;
 use App\Models\MediaAsset;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\BatchPdfService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -66,6 +69,7 @@ class GenerateBatchController extends Controller
                 'created_at' => $batch->created_at?->toDateTimeString(),
                 'finished_at' => $batch->finished_at?->toDateTimeString(),
                 'a4_pdf_download_url' => $this->a4PdfDownloadUrl($batch),
+                'a4_pdf_resolve_url' => $this->a4PdfResolveUrl($batch),
                 'generated_cards' => $batch->generatedCards->map(fn (GeneratedCard $generatedCard): array => [
                     'id' => $generatedCard->id,
                     'student_name' => $generatedCard->student?->name,
@@ -73,6 +77,9 @@ class GenerateBatchController extends Controller
                     'error_message' => $generatedCard->error_message,
                     'pdf_download_url' => $generatedCard->pdfMedia
                         ? route('media-assets.download', $generatedCard->pdfMedia)
+                        : null,
+                    'pdf_stream_download_url' => $generatedCard->pdfMedia
+                        ? route('media-assets.stream', $generatedCard->pdfMedia)
                         : null,
                 ])->values(),
             ])->values(),
@@ -102,7 +109,7 @@ class GenerateBatchController extends Controller
 
         $options = $request->optionsPayload();
 
-        DB::transaction(function () use ($request, $students, $template, $user, $institutionId, $options): void {
+        $batch = DB::transaction(function () use ($students, $template, $user, $institutionId, $options): GenerateBatch {
             $batch = GenerateBatch::query()->create([
                 'template_id' => $template->id,
                 'requested_by' => $user->id,
@@ -125,17 +132,45 @@ class GenerateBatchController extends Controller
 
                 RenderGeneratedCardJob::dispatch($generatedCard->id);
             }
+            return $batch;
         });
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'generate_batch.create',
+            subject: $batch,
+            request: $request,
+            metadata: [
+                'template_id' => $template->id,
+                'total_cards' => $students->count(),
+            ],
+        );
 
         return back()->with('status', 'Generate batch queued.');
     }
 
-    public function downloadA4Pdf(GenerateBatch $generateBatch, BatchPdfService $batchPdfService): RedirectResponse
+    public function downloadA4Pdf(Request $request, GenerateBatch $generateBatch, BatchPdfService $batchPdfService): RedirectResponse|JsonResponse
     {
-        $user = request()->user();
+        $user = $request->user();
         $this->ensureInstitutionAccess($user, $generateBatch->institution_id);
 
         $mediaAsset = $this->resolveOrGenerateBatchPdf($generateBatch, $user, $batchPdfService);
+        app(ActivityLogService::class)->write(
+            actor: $user,
+            action: 'generate_batch.download_a4_pdf',
+            subject: $generateBatch,
+            request: $request,
+            metadata: [
+                'media_asset_id' => $mediaAsset->id,
+            ],
+        );
+
+        if ($request->expectsJson() || $request->boolean('as_json')) {
+            return response()->json([
+                'media_asset_id' => $mediaAsset->id,
+                'stream_download_url' => route('media-assets.stream', $mediaAsset),
+                'filename' => $mediaAsset->original_name ?: sprintf('batch-%d-a4.pdf', $generateBatch->id),
+            ]);
+        }
 
         return redirect()->route('media-assets.download', $mediaAsset);
     }
@@ -148,7 +183,7 @@ class GenerateBatchController extends Controller
         if (is_int($existingId) || ctype_digit((string) $existingId)) {
             $existing = MediaAsset::query()->find((int) $existingId);
 
-            if ($existing) {
+            if ($existing && $this->canAccessMediaAsset($user, $existing)) {
                 return $existing;
             }
         }
@@ -167,5 +202,17 @@ class GenerateBatchController extends Controller
         }
 
         return route('generate-batches.download-a4', $batch);
+    }
+
+    protected function a4PdfResolveUrl(GenerateBatch $batch): ?string
+    {
+        if (! in_array($batch->status, ['done', 'failed'], true)) {
+            return null;
+        }
+
+        return route('generate-batches.download-a4', [
+            'generateBatch' => $batch,
+            'as_json' => 1,
+        ]);
     }
 }

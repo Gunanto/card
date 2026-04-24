@@ -6,6 +6,7 @@ use App\Http\Requests\SaveCardTemplateRequest;
 use App\Models\CardTemplate;
 use App\Models\CardType;
 use App\Models\MediaAsset;
+use App\Services\ActivityLogService;
 use App\Support\DefaultCardTemplateData;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -80,7 +81,13 @@ class CardTemplateController extends Controller
             abort_unless($request->user()->isAdmin(), 403);
         }
 
-        CardTemplate::query()->create($data);
+        $template = CardTemplate::query()->create($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'card_template.create',
+            subject: $template,
+            request: $request,
+        );
 
         return back()->with('status', 'Template created.');
     }
@@ -105,6 +112,12 @@ class CardTemplateController extends Controller
 
         $this->assertTemplateBackgrounds($cardTemplate, $data);
         $cardTemplate->update($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'card_template.update',
+            subject: $cardTemplate,
+            request: $request,
+        );
 
         return back()->with('status', 'Template updated.');
     }
@@ -116,6 +129,13 @@ class CardTemplateController extends Controller
         } else {
             abort_unless(request()->user()->isAdmin(), 403);
         }
+
+        app(ActivityLogService::class)->write(
+            actor: request()->user(),
+            action: 'card_template.delete',
+            subject: $cardTemplate,
+            request: request(),
+        );
 
         $cardTemplate->delete();
 

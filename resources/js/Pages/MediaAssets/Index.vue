@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { computed, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = defineProps({
     assets: { type: Array, required: true },
@@ -20,6 +20,15 @@ const form = useForm({
 });
 
 const ownerOptions = computed(() => props.owners[form.owner_type] ?? []);
+const downloadProgress = ref({
+    active: false,
+    label: '',
+    percent: 0,
+    loaded: 0,
+    total: 0,
+    error: '',
+});
+let downloadResetTimer = null;
 
 watch(
     () => form.category,
@@ -54,6 +63,120 @@ const submit = () => {
         },
     });
 };
+
+const formatBytes = (value) => {
+    const bytes = Number(value) || 0;
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+};
+
+const safeFilename = (filename, fallback) => {
+    const candidate = (filename || '').trim();
+    if (candidate === '') return fallback;
+    return candidate.replace(/[\\/:*?"<>|]/g, '_');
+};
+
+const triggerBrowserDownload = (blob, filename) => {
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(objectUrl);
+};
+
+const resetDownloadProgressLater = () => {
+    if (downloadResetTimer) {
+        window.clearTimeout(downloadResetTimer);
+    }
+    downloadResetTimer = window.setTimeout(() => {
+        downloadProgress.value = {
+            active: false,
+            label: '',
+            percent: 0,
+            loaded: 0,
+            total: 0,
+            error: '',
+        };
+    }, 1500);
+};
+
+const downloadAsset = async (asset) => {
+    if (!asset?.stream_download_url) return;
+
+    try {
+        downloadProgress.value = {
+            active: true,
+            label: `Downloading ${asset.original_name || `asset-${asset.id}`}`,
+            percent: 0,
+            loaded: 0,
+            total: 0,
+            error: '',
+        };
+
+        const response = await fetch(asset.stream_download_url, {
+            method: 'GET',
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok || !response.body) {
+            throw new Error('Download gagal dijalankan.');
+        }
+
+        const total = Number(response.headers.get('content-length') ?? 0);
+        const chunks = [];
+        let loaded = 0;
+        const reader = response.body.getReader();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+                chunks.push(value);
+                loaded += value.byteLength;
+                const percent = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+                downloadProgress.value = {
+                    ...downloadProgress.value,
+                    loaded,
+                    total,
+                    percent,
+                };
+            }
+        }
+
+        const blob = new Blob(chunks, {
+            type: response.headers.get('content-type') || 'application/octet-stream',
+        });
+
+        downloadProgress.value = {
+            ...downloadProgress.value,
+            loaded: total > 0 ? total : loaded,
+            total: total > 0 ? total : loaded,
+            percent: 100,
+        };
+        triggerBrowserDownload(
+            blob,
+            safeFilename(asset.original_name, `asset-${asset.id}`),
+        );
+        resetDownloadProgressLater();
+    } catch (error) {
+        downloadProgress.value = {
+            ...downloadProgress.value,
+            active: false,
+            error: error instanceof Error ? error.message : 'Download gagal.',
+        };
+    }
+};
+
+onBeforeUnmount(() => {
+    if (downloadResetTimer) {
+        window.clearTimeout(downloadResetTimer);
+    }
+});
 </script>
 
 <template>
@@ -100,6 +223,26 @@ const submit = () => {
 
                 <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                     <h3 class="text-lg font-semibold text-gray-900">Daftar Media</h3>
+                    <div v-if="downloadProgress.active || downloadProgress.error" class="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-3">
+                        <p class="text-xs font-medium text-sky-900">
+                            {{ downloadProgress.label || 'Download' }}
+                        </p>
+                        <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-sky-100">
+                            <div
+                                class="h-full bg-sky-600 transition-all duration-200"
+                                :style="{ width: `${downloadProgress.percent}%` }"
+                            />
+                        </div>
+                        <p class="mt-1 text-xs text-sky-800">
+                            {{ downloadProgress.percent }}%
+                            <span v-if="downloadProgress.total > 0">
+                                ({{ formatBytes(downloadProgress.loaded) }} / {{ formatBytes(downloadProgress.total) }})
+                            </span>
+                        </p>
+                        <p v-if="downloadProgress.error" class="mt-1 text-xs text-rose-700">
+                            {{ downloadProgress.error }}
+                        </p>
+                    </div>
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead>
@@ -126,9 +269,13 @@ const submit = () => {
                                         <p class="text-xs text-gray-500">{{ asset.width || '-' }} x {{ asset.height || '-' }}</p>
                                     </td>
                                     <td class="px-3 py-3">
-                                        <a :href="asset.download_url" class="rounded-lg border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-700">
-                                            Presigned Link
-                                        </a>
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-700"
+                                            @click="downloadAsset(asset)"
+                                        >
+                                            Download
+                                        </button>
                                     </td>
                                 </tr>
                             </tbody>

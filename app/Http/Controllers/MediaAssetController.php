@@ -7,10 +7,14 @@ use App\Models\CardTemplate;
 use App\Models\Institution;
 use App\Models\MediaAsset;
 use App\Models\Student;
+use App\Services\ActivityLogService;
 use App\Services\MediaAssetService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -46,6 +50,7 @@ class MediaAssetController extends Controller
                 'height' => $mediaAsset->height,
                 'created_at' => $mediaAsset->created_at?->toDateTimeString(),
                 'download_url' => route('media-assets.download', $mediaAsset),
+                'stream_download_url' => route('media-assets.stream', $mediaAsset),
                 'temporary_url_endpoint' => route('media-assets.temporary-url', $mediaAsset),
             ])->values(),
             'categories' => collect(MediaAsset::USER_UPLOAD_CATEGORIES)
@@ -92,6 +97,15 @@ class MediaAssetController extends Controller
         );
 
         $this->syncOwnerReference($owner, $asset);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'media_asset.upload',
+            subject: $asset,
+            request: $request,
+            metadata: [
+                'category' => $asset->category,
+            ],
+        );
 
         return back()->with('status', sprintf('Media uploaded: #%d', $asset->id));
     }
@@ -108,8 +122,41 @@ class MediaAssetController extends Controller
     public function download(MediaAsset $mediaAsset): RedirectResponse
     {
         abort_unless($this->canAccessMediaAsset(request()->user(), $mediaAsset), 403);
+        app(ActivityLogService::class)->write(
+            actor: request()->user(),
+            action: 'media_asset.download',
+            subject: $mediaAsset,
+            request: request(),
+        );
 
         return redirect()->away($this->mediaAssetService->temporaryUrl($mediaAsset, now()->addMinutes(10)));
+    }
+
+    public function stream(Request $request, MediaAsset $mediaAsset): StreamedResponse
+    {
+        abort_unless($this->canAccessMediaAsset($request->user(), $mediaAsset), 403);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'media_asset.download_stream',
+            subject: $mediaAsset,
+            request: $request,
+        );
+
+        $stream = Storage::disk($mediaAsset->disk)->readStream($mediaAsset->object_key);
+
+        if (! is_resource($stream)) {
+            abort(404, 'File tidak ditemukan.');
+        }
+
+        $filename = $mediaAsset->original_name ?: basename($mediaAsset->object_key);
+
+        return response()->streamDownload(function () use ($stream): void {
+            fpassthru($stream);
+            fclose($stream);
+        }, $filename, [
+            'Content-Type' => $mediaAsset->mime_type ?: 'application/octet-stream',
+            'Content-Length' => (string) max(0, (int) $mediaAsset->size_bytes),
+        ]);
     }
 
     protected function resolveOwner(string $ownerType, int $ownerId): Model

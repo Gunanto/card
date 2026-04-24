@@ -85,11 +85,13 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
     Route::post('/imports/students', [ImportController::class, 'store'])->name('imports.students.store');
+    Route::post('/imports/photos', [ImportController::class, 'storePhotos'])->name('imports.photos.store');
 
     Route::get('/media-assets', [MediaAssetController::class, 'index'])->name('media-assets.index');
     Route::post('/media-assets', [MediaAssetController::class, 'store'])->name('media-assets.store');
     Route::get('/media-assets/{mediaAsset}/temporary-url', [MediaAssetController::class, 'temporaryUrl'])->name('media-assets.temporary-url');
     Route::get('/media-assets/{mediaAsset}/download', [MediaAssetController::class, 'download'])->name('media-assets.download');
+    Route::get('/media-assets/{mediaAsset}/stream', [MediaAssetController::class, 'stream'])->name('media-assets.stream');
 
     Route::get('/card-templates', [CardTemplateController::class, 'index'])->name('card-templates.index');
     Route::post('/card-templates', [CardTemplateController::class, 'store'])->name('card-templates.store');
@@ -105,6 +107,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
         Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+    });
+
+    Route::middleware('role:guru')->group(function () {
+        Route::get('/guru/ketentuan', function (): Response {
+            return Inertia::render('Guru/Ketentuan');
+        })->name('guru.ketentuan');
     });
 });
 

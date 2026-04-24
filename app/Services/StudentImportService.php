@@ -13,7 +13,7 @@ use RuntimeException;
 
 class StudentImportService
 {
-    public function process(Import $import, string $absoluteFilePath): array
+    public function process(Import $import, string $absoluteFilePath, ?callable $onProgress = null): array
     {
         $rows = $this->readRows($absoluteFilePath);
         $mapping = is_array($import->mapping_json) ? $import->mapping_json : [];
@@ -21,6 +21,7 @@ class StudentImportService
         $success = 0;
         $failed = 0;
         $total = count($rows);
+        $onProgress?($success, $failed, $total);
 
         foreach ($rows as $index => $row) {
             try {
@@ -74,6 +75,8 @@ class StudentImportService
                     'raw' => Arr::only($row, ['student_code', 'name', 'nis', 'nisn', 'class_code', 'class_name']),
                 ];
             }
+
+            $onProgress?($success, $failed, $total);
         }
 
         return [
@@ -210,4 +213,3 @@ class StudentImportService
             ->toString();
     }
 }
-

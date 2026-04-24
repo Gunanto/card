@@ -51,7 +51,7 @@ class BatchPdfService
         return app(MediaAssetService::class)->storeContent(
             $pdfBinary,
             'generated_batch_pdf',
-            null,
+            $batch->institution,
             $user,
             $pathPrefix,
             'pdf',
@@ -68,4 +68,3 @@ class BatchPdfService
         return sprintf('data:%s;base64,%s', $mime, base64_encode($content));
     }
 }
-

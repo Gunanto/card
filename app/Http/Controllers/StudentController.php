@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SaveStudentRequest;
 use App\Models\Classroom;
 use App\Models\Student;
+use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -78,7 +79,13 @@ class StudentController extends Controller
         $this->ensureInstitutionAccess($request->user(), $data['institution_id']);
         $this->assertClassroomWithinInstitution($data['institution_id'], $data['class_id'] ?? null);
 
-        Student::query()->create($data);
+        $student = Student::query()->create($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'student.create',
+            subject: $student,
+            request: $request,
+        );
 
         return back()->with('status', 'Student created.');
     }
@@ -95,6 +102,12 @@ class StudentController extends Controller
 
         $this->assertClassroomWithinInstitution($data['institution_id'], $data['class_id'] ?? null);
         $student->update($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'student.update',
+            subject: $student,
+            request: $request,
+        );
 
         return back()->with('status', 'Student updated.');
     }
@@ -102,6 +115,12 @@ class StudentController extends Controller
     public function destroy(Student $student): RedirectResponse
     {
         $this->ensureInstitutionAccess(request()->user(), $student->institution_id);
+        app(ActivityLogService::class)->write(
+            actor: request()->user(),
+            action: 'student.delete',
+            subject: $student,
+            request: request(),
+        );
 
         $student->delete();
 

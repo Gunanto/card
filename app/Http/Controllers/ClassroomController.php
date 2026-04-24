@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SaveClassroomRequest;
 use App\Models\Classroom;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -64,7 +65,13 @@ class ClassroomController extends Controller
         $this->ensureInstitutionAccess($request->user(), $data['institution_id']);
         $this->assertTeacherWithinInstitution($data['institution_id'], $data['homeroom_teacher_user_id'] ?? null);
 
-        Classroom::query()->create($data);
+        $classroom = Classroom::query()->create($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'classroom.create',
+            subject: $classroom,
+            request: $request,
+        );
 
         return back()->with('status', 'Classroom created.');
     }
@@ -81,6 +88,12 @@ class ClassroomController extends Controller
 
         $this->assertTeacherWithinInstitution($data['institution_id'], $data['homeroom_teacher_user_id'] ?? null);
         $classroom->update($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'classroom.update',
+            subject: $classroom,
+            request: $request,
+        );
 
         return back()->with('status', 'Classroom updated.');
     }
@@ -88,6 +101,12 @@ class ClassroomController extends Controller
     public function destroy(Classroom $classroom): RedirectResponse
     {
         $this->ensureInstitutionAccess(request()->user(), $classroom->institution_id);
+        app(ActivityLogService::class)->write(
+            actor: request()->user(),
+            action: 'classroom.delete',
+            subject: $classroom,
+            request: request(),
+        );
 
         $classroom->delete();
 

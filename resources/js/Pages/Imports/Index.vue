@@ -16,6 +16,10 @@ const form = useForm({
     file: null,
     mapping_json_text: '',
 });
+const photoForm = useForm({
+    institution_id: props.forcedInstitutionId ?? props.institutions[0]?.id ?? '',
+    file: null,
+});
 
 const autoRefresh = ref(true);
 const detectedHeaders = ref([]);
@@ -100,6 +104,20 @@ const submit = () => {
     });
 };
 
+const handlePhotoZipInput = (event) => {
+    photoForm.file = event.target.files?.[0] ?? null;
+};
+
+const submitPhotoImport = () => {
+    photoForm.post(route('imports.photos.store'), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            photoForm.reset('file');
+        },
+    });
+};
+
 const statusClasses = (status) => {
     if (status === 'done') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
     if (status === 'failed') return 'bg-rose-100 text-rose-800 border-rose-200';
@@ -107,12 +125,34 @@ const statusClasses = (status) => {
     return 'bg-sky-100 text-sky-800 border-sky-200';
 };
 
+const importPercent = (item) => {
+    const total = Number(item.total_rows ?? 0);
+    const finished = Number(item.success_rows ?? 0) + Number(item.failed_rows ?? 0);
+
+    if (total > 0) {
+        return Math.min(100, Math.round((finished / total) * 100));
+    }
+
+    if (item.status === 'done' || item.status === 'failed') {
+        return 100;
+    }
+
+    return 0;
+};
+
+const importProgressLabel = (item) => {
+    if (item.status === 'pending') return 'Menunggu queue';
+    if (item.status === 'processing') return 'Sedang diproses';
+    if (item.status === 'failed') return 'Selesai dengan gagal';
+    return 'Selesai';
+};
+
 onMounted(() => {
     intervalId = window.setInterval(() => {
         if (autoRefresh.value && hasRunningImport()) {
             refreshImports();
         }
-    }, 5000);
+    }, 2000);
 });
 
 onBeforeUnmount(() => {
@@ -129,14 +169,14 @@ onBeforeUnmount(() => {
         <template #header>
             <div>
                 <h2 class="text-xl font-semibold text-gray-800">Imports</h2>
-                <p class="text-sm text-gray-500">Import data siswa dari CSV/Excel dengan proses async queue.</p>
+                <p class="text-sm text-gray-500">Import data siswa (CSV/Excel) dan foto siswa (ZIP) dengan proses async queue.</p>
             </div>
         </template>
 
         <div class="py-8">
             <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[0.9fr,1.5fr] lg:px-8">
                 <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">Upload File Import</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Upload File Import Data Siswa</h3>
                     <p class="mt-1 text-xs text-gray-500">
                         Header standar: {{ sampleHeaders.join(', ') }}
                     </p>
@@ -203,6 +243,37 @@ onBeforeUnmount(() => {
                             Upload & Proses
                         </button>
                     </form>
+
+                    <div class="mt-8 border-t border-gray-200 pt-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Upload ZIP Foto Siswa</h3>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Nama file wajib mengikuti <span class="font-mono">student_code</span>, contoh:
+                            <span class="font-mono">SIS-0001.jpg</span>.
+                        </p>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Format didukung: jpg, jpeg, png, webp.
+                        </p>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Batas per foto: maksimal 500KB, dimensi minimal 300x300 px.
+                        </p>
+                        <form class="mt-4 space-y-4" @submit.prevent="submitPhotoImport">
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Institusi</label>
+                                <select v-model="photoForm.institution_id" class="w-full rounded-lg border-gray-300 text-sm" :disabled="forcedInstitutionId !== null">
+                                    <option v-for="institution in institutions" :key="institution.id" :value="institution.id">
+                                        {{ institution.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">File ZIP</label>
+                                <input class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" type="file" accept=".zip,application/zip" @input="handlePhotoZipInput" />
+                            </div>
+                            <button type="submit" class="rounded-lg bg-sky-700 px-4 py-2 text-sm font-medium text-white">
+                                Upload ZIP Foto
+                            </button>
+                        </form>
+                    </div>
                 </section>
 
                 <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -249,14 +320,23 @@ onBeforeUnmount(() => {
                                         <p>total: {{ item.total_rows }}</p>
                                         <p>sukses: {{ item.success_rows }}</p>
                                         <p>gagal: {{ item.failed_rows }}</p>
-                                        <p v-if="item.total_rows > 0" class="mt-1">
-                                            progress: {{ Math.round(((item.success_rows + item.failed_rows) / item.total_rows) * 100) }}%
-                                        </p>
+                                        <div class="mt-2">
+                                            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                                                <div
+                                                    class="h-full transition-all duration-300"
+                                                    :class="item.status === 'failed' ? 'bg-rose-500' : 'bg-sky-600'"
+                                                    :style="{ width: `${importPercent(item)}%` }"
+                                                />
+                                            </div>
+                                            <p class="mt-1 text-[11px] text-gray-600">
+                                                {{ importProgressLabel(item) }} - {{ importPercent(item) }}%
+                                            </p>
+                                        </div>
                                     </td>
                                     <td class="px-3 py-3 text-xs text-rose-600">
                                         <p v-if="!item.error_summary_json || item.error_summary_json.length === 0">-</p>
                                         <p v-for="(error, idx) in (item.error_summary_json || []).slice(0, 3)" :key="idx">
-                                            Row {{ error.row || '?' }}: {{ error.message }}
+                                            File {{ error.file || '-' }} / Row {{ error.row || '?' }}: {{ error.message }}
                                         </p>
                                     </td>
                                 </tr>

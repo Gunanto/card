@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreStudentImportRequest;
+use App\Http\Requests\StoreStudentPhotoImportRequest;
+use App\Jobs\ProcessStudentPhotoImportJob;
 use App\Jobs\ProcessStudentImportJob;
 use App\Models\Import;
+use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -119,9 +122,57 @@ class ImportController extends Controller
             'mapping_json' => $request->mappingPayload(),
             'status' => 'pending',
         ]);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'import.students.create',
+            subject: $import,
+            request: $request,
+            metadata: [
+                'type' => $type,
+                'source_filename' => $file->getClientOriginalName(),
+            ],
+        );
 
         ProcessStudentImportJob::dispatch($import->id, $storedPath, 'local');
 
         return back()->with('status', 'Import file diterima dan sedang diproses.');
+    }
+
+    public function storePhotos(StoreStudentPhotoImportRequest $request): RedirectResponse
+    {
+        $institutionId = $request->user()->isGuru()
+            ? $request->user()->institution_id
+            : $request->integer('institution_id');
+
+        if ($institutionId === null) {
+            abort(422, 'Institution harus dipilih.');
+        }
+
+        $this->ensureInstitutionAccess($request->user(), $institutionId);
+
+        $file = $request->file('file');
+        $storedPath = $file->store('imports/photos', 'local');
+
+        $import = Import::query()->create([
+            'institution_id' => $institutionId,
+            'imported_by' => $request->user()->id,
+            'type' => 'photos_zip',
+            'source_filename' => $file->getClientOriginalName(),
+            'status' => 'pending',
+        ]);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'import.photos.create',
+            subject: $import,
+            request: $request,
+            metadata: [
+                'type' => 'photos_zip',
+                'source_filename' => $file->getClientOriginalName(),
+            ],
+        );
+
+        ProcessStudentPhotoImportJob::dispatch($import->id, $storedPath, 'local');
+
+        return back()->with('status', 'Import foto ZIP diterima dan sedang diproses.');
     }
 }

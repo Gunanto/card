@@ -17,7 +17,16 @@ const form = useForm({
 });
 
 const autoRefresh = ref(true);
+const downloadProgress = ref({
+    active: false,
+    label: '',
+    percent: 0,
+    loaded: 0,
+    total: 0,
+    error: '',
+});
 let intervalId = null;
+let downloadResetTimer = null;
 
 const selectedTemplate = computed(() =>
     props.templates.find((template) => Number(template.id) === Number(form.template_id)) ?? null,
@@ -68,6 +77,157 @@ const statusClasses = (status) => {
     return 'bg-sky-100 text-sky-800 border-sky-200';
 };
 
+const formatBytes = (value) => {
+    const bytes = Number(value) || 0;
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+};
+
+const safeFilename = (filename, fallback) => {
+    const candidate = (filename || '').trim();
+    if (candidate === '') return fallback;
+    return candidate.replace(/[\\/:*?"<>|]/g, '_');
+};
+
+const triggerBrowserDownload = (blob, filename) => {
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(objectUrl);
+};
+
+const resetDownloadProgressLater = () => {
+    if (downloadResetTimer) {
+        window.clearTimeout(downloadResetTimer);
+    }
+    downloadResetTimer = window.setTimeout(() => {
+        downloadProgress.value = {
+            active: false,
+            label: '',
+            percent: 0,
+            loaded: 0,
+            total: 0,
+            error: '',
+        };
+    }, 1500);
+};
+
+const downloadWithProgress = async ({ streamUrl, label, fallbackFilename }) => {
+    downloadProgress.value = {
+        active: true,
+        label,
+        percent: 0,
+        loaded: 0,
+        total: 0,
+        error: '',
+    };
+
+    const response = await fetch(streamUrl, {
+        method: 'GET',
+        credentials: 'same-origin',
+    });
+
+    if (!response.ok || !response.body) {
+        throw new Error('Download gagal dijalankan.');
+    }
+
+    const total = Number(response.headers.get('content-length') ?? 0);
+    const chunks = [];
+    let loaded = 0;
+    const reader = response.body.getReader();
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        if (value) {
+            chunks.push(value);
+            loaded += value.byteLength;
+            const percent = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+            downloadProgress.value = {
+                ...downloadProgress.value,
+                loaded,
+                total,
+                percent,
+            };
+        }
+    }
+
+    const blob = new Blob(chunks, {
+        type: response.headers.get('content-type') || 'application/octet-stream',
+    });
+
+    downloadProgress.value = {
+        ...downloadProgress.value,
+        loaded: total > 0 ? total : loaded,
+        total: total > 0 ? total : loaded,
+        percent: 100,
+    };
+
+    triggerBrowserDownload(blob, safeFilename(fallbackFilename, 'download.bin'));
+    resetDownloadProgressLater();
+};
+
+const downloadGeneratedCardPdf = async (batchId, generatedCard) => {
+    if (!generatedCard.pdf_stream_download_url) return;
+
+    try {
+        await downloadWithProgress({
+            streamUrl: generatedCard.pdf_stream_download_url,
+            label: `Downloading PDF siswa (Batch #${batchId})`,
+            fallbackFilename: `generated-card-${generatedCard.id}.pdf`,
+        });
+    } catch (error) {
+        downloadProgress.value = {
+            ...downloadProgress.value,
+            active: false,
+            error: error instanceof Error ? error.message : 'Download gagal.',
+        };
+    }
+};
+
+const downloadBatchA4Pdf = async (batch) => {
+    if (!batch.a4_pdf_resolve_url) return;
+
+    try {
+        const resolveResponse = await fetch(batch.a4_pdf_resolve_url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+            credentials: 'same-origin',
+        });
+
+        if (!resolveResponse.ok) {
+            throw new Error('Gagal menyiapkan file PDF batch.');
+        }
+
+        const payload = await resolveResponse.json();
+
+        if (!payload.stream_download_url) {
+            throw new Error('Link download batch tidak tersedia.');
+        }
+
+        await downloadWithProgress({
+            streamUrl: payload.stream_download_url,
+            label: `Downloading PDF A4 Batch #${batch.id}`,
+            fallbackFilename: payload.filename || `batch-${batch.id}-a4.pdf`,
+        });
+    } catch (error) {
+        downloadProgress.value = {
+            ...downloadProgress.value,
+            active: false,
+            error: error instanceof Error ? error.message : 'Download gagal.',
+        };
+    }
+};
+
 onMounted(() => {
     intervalId = window.setInterval(() => {
         if (autoRefresh.value && hasRunningBatch()) {
@@ -79,6 +239,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
     if (intervalId) {
         window.clearInterval(intervalId);
+    }
+
+    if (downloadResetTimer) {
+        window.clearTimeout(downloadResetTimer);
     }
 });
 </script>
@@ -153,6 +317,26 @@ onBeforeUnmount(() => {
                             Auto refresh
                         </label>
                     </div>
+                    <div v-if="downloadProgress.active || downloadProgress.error" class="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-3">
+                        <p class="text-xs font-medium text-sky-900">
+                            {{ downloadProgress.label || 'Download' }}
+                        </p>
+                        <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-sky-100">
+                            <div
+                                class="h-full bg-sky-600 transition-all duration-200"
+                                :style="{ width: `${downloadProgress.percent}%` }"
+                            />
+                        </div>
+                        <p class="mt-1 text-xs text-sky-800">
+                            {{ downloadProgress.percent }}%
+                            <span v-if="downloadProgress.total > 0">
+                                ({{ formatBytes(downloadProgress.loaded) }} / {{ formatBytes(downloadProgress.total) }})
+                            </span>
+                        </p>
+                        <p v-if="downloadProgress.error" class="mt-1 text-xs text-rose-700">
+                            {{ downloadProgress.error }}
+                        </p>
+                    </div>
                     <div class="mt-4 space-y-4">
                         <article v-for="batch in batches" :key="batch.id" class="rounded-xl border border-gray-200 p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -180,13 +364,14 @@ onBeforeUnmount(() => {
                                     <p v-if="batch.total_cards > 0" class="text-xs text-gray-500">
                                         progress: {{ Math.round(((batch.success_count + batch.failed_count) / batch.total_cards) * 100) }}%
                                     </p>
-                                    <a
-                                        v-if="batch.a4_pdf_download_url"
-                                        :href="batch.a4_pdf_download_url"
+                                    <button
+                                        v-if="batch.a4_pdf_resolve_url"
+                                        type="button"
                                         class="mt-2 inline-block rounded-lg border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-700"
+                                        @click="downloadBatchA4Pdf(batch)"
                                     >
                                         Download PDF A4 2x5
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                             <div class="mt-4 overflow-x-auto">
@@ -216,13 +401,14 @@ onBeforeUnmount(() => {
                                             </td>
                                             <td class="px-3 py-2 text-xs text-rose-600">{{ generatedCard.error_message || '-' }}</td>
                                             <td class="px-3 py-2">
-                                                <a
-                                                    v-if="generatedCard.pdf_download_url"
-                                                    :href="generatedCard.pdf_download_url"
+                                                <button
+                                                    v-if="generatedCard.pdf_stream_download_url"
+                                                    type="button"
                                                     class="rounded-lg border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-700"
+                                                    @click="downloadGeneratedCardPdf(batch.id, generatedCard)"
                                                 >
                                                     Download
-                                                </a>
+                                                </button>
                                                 <span v-else class="text-xs text-gray-400">Belum ada</span>
                                             </td>
                                         </tr>

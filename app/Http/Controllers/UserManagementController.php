@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SaveUserRequest;
 use App\Models\Institution;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -47,7 +48,13 @@ class UserManagementController extends Controller
         $data['institution_id'] = $data['role'] === 'guru' ? ($data['institution_id'] ?? null) : null;
         $data['email_verified_at'] = now();
 
-        User::query()->create($data);
+        $user = User::query()->create($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'user.create',
+            subject: $user,
+            request: $request,
+        );
 
         return back()->with('status', 'User created.');
     }
@@ -64,6 +71,12 @@ class UserManagementController extends Controller
         }
 
         $user->update($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'user.update',
+            subject: $user,
+            request: $request,
+        );
 
         return back()->with('status', 'User updated.');
     }
@@ -72,10 +85,15 @@ class UserManagementController extends Controller
     {
         abort_unless(request()->user()->isAdmin(), 403);
         abort_if($user->id === request()->user()->id, 422, 'Tidak bisa menghapus akun sendiri.');
+        app(ActivityLogService::class)->write(
+            actor: request()->user(),
+            action: 'user.delete',
+            subject: $user,
+            request: request(),
+        );
 
         $user->delete();
 
         return back()->with('status', 'User deleted.');
     }
 }
-

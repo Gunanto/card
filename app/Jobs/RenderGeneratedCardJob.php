@@ -10,6 +10,7 @@ use App\Support\SimplePdf;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -51,25 +52,33 @@ class RenderGeneratedCardJob implements ShouldQueue
             $institution = $batch->institution;
             $template = $generatedCard->template;
             $studentPhoto = $student->mediaAssets()->where('category', 'student_photo')->latest('id')->first();
+            $assetMap = [
+                'student_photo' => $studentPhoto,
+                'institution_logo' => $institution->logoMedia,
+                'institution_stamp' => $institution->stampMedia,
+                'leader_signature' => $institution->leaderSignatureMedia,
+                'template_background_front' => $template->backgroundFrontMedia,
+                'template_background_back' => $template->backgroundBackMedia,
+            ];
 
             $snapshot = [
                 'institution' => [
-                    'logo' => $this->mediaSnapshot($institution->logoMedia),
-                    'stamp' => $this->mediaSnapshot($institution->stampMedia),
-                    'signature' => $this->mediaSnapshot($institution->leaderSignatureMedia),
+                    'logo' => $this->mediaSnapshot($assetMap['institution_logo']),
+                    'stamp' => $this->mediaSnapshot($assetMap['institution_stamp']),
+                    'signature' => $this->mediaSnapshot($assetMap['leader_signature']),
                 ],
                 'student' => [
-                    'photo' => $this->mediaSnapshot($studentPhoto),
+                    'photo' => $this->mediaSnapshot($assetMap['student_photo']),
                 ],
                 'template' => [
-                    'background_front' => $this->mediaSnapshot($template->backgroundFrontMedia),
-                    'background_back' => $this->mediaSnapshot($template->backgroundBackMedia),
+                    'background_front' => $this->mediaSnapshot($assetMap['template_background_front']),
+                    'background_back' => $this->mediaSnapshot($assetMap['template_background_back']),
                 ],
             ];
 
             $basePath = sprintf('generated/%d/%d', $batch->id, $student->id);
             $frontAsset = $mediaAssetService->storeContent(
-                $this->frontSvg($generatedCard, $snapshot),
+                $this->frontSvg($generatedCard, $assetMap),
                 'generated_front',
                 $generatedCard,
                 $batch->requestedBy,
@@ -78,7 +87,7 @@ class RenderGeneratedCardJob implements ShouldQueue
                 'image/svg+xml',
             );
             $backAsset = $mediaAssetService->storeContent(
-                $this->backSvg($generatedCard),
+                $this->backSvg($generatedCard, $assetMap),
                 'generated_back',
                 $generatedCard,
                 $batch->requestedBy,
@@ -136,56 +145,158 @@ class RenderGeneratedCardJob implements ShouldQueue
         ]);
     }
 
-    protected function frontSvg(GeneratedCard $generatedCard, array $snapshot): string
+    protected function frontSvg(GeneratedCard $generatedCard, array $assetMap): string
     {
-        $student = $generatedCard->student;
-        $institution = $generatedCard->batch->institution;
-        $classroom = $student->classroom?->name ?? '-';
-        $photoStatus = $snapshot['student']['photo']['object_key'] ?? 'missing';
-        $logoStatus = $snapshot['institution']['logo']['object_key'] ?? 'missing';
+        $template = $generatedCard->template;
+        $config = is_array($template->config_json) ? $template->config_json : [];
+        $canvasWidthMm = $this->number($config['canvas']['width_mm'] ?? null, (float) $template->width_mm);
+        $canvasHeightMm = $this->number($config['canvas']['height_mm'] ?? null, (float) $template->height_mm);
+        $pxPerMm = 10.0;
+        $widthPx = (int) max(1, round($canvasWidthMm * $pxPerMm));
+        $heightPx = (int) max(1, round($canvasHeightMm * $pxPerMm));
+        $elements = is_array($config['elements'] ?? null)
+            ? array_values(array_filter($config['elements'], 'is_array'))
+            : [];
+        usort($elements, fn (array $a, array $b): int => $this->zIndex($a) <=> $this->zIndex($b));
 
-        return <<<SVG
-<svg xmlns="http://www.w3.org/2000/svg" width="856" height="540" viewBox="0 0 856 540">
-  <rect width="856" height="540" rx="28" fill="#f8fafc" />
-  <rect x="24" y="24" width="808" height="492" rx="24" fill="#e2e8f0" />
-  <rect x="54" y="94" width="190" height="246" rx="18" fill="#cbd5e1" stroke="#475569" stroke-width="4" />
-  <text x="149" y="225" text-anchor="middle" font-size="28" fill="#334155">PHOTO</text>
-  <text x="149" y="265" text-anchor="middle" font-size="16" fill="#475569">{$this->svgEscape($photoStatus)}</text>
-  <rect x="676" y="46" width="110" height="110" rx="18" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="4" />
-  <text x="731" y="105" text-anchor="middle" font-size="24" fill="#1e3a8a">LOGO</text>
-  <text x="731" y="132" text-anchor="middle" font-size="12" fill="#1e3a8a">{$this->svgEscape($logoStatus)}</text>
-  <text x="280" y="120" font-size="38" font-weight="700" fill="#0f172a">{$this->svgEscape($institution->name)}</text>
-  <text x="280" y="172" font-size="26" fill="#334155">{$this->svgEscape($generatedCard->template->name)}</text>
-  <text x="280" y="252" font-size="42" font-weight="700" fill="#111827">{$this->svgEscape($student->name)}</text>
-  <text x="280" y="302" font-size="26" fill="#374151">Kode: {$this->svgEscape($student->student_code)}</text>
-  <text x="280" y="340" font-size="26" fill="#374151">Ujian: {$this->svgEscape($student->exam_number ?? '-')}</text>
-  <text x="280" y="378" font-size="26" fill="#374151">Kelas: {$this->svgEscape($classroom)}</text>
-  <text x="280" y="416" font-size="24" fill="#475569">Pimpinan: {$this->svgEscape($institution->leader_name ?? '-')}</text>
-  <text x="280" y="454" font-size="24" fill="#475569">Jabatan: {$this->svgEscape($institution->leader_title ?? '-')}</text>
-  <rect x="604" y="312" width="148" height="148" rx="24" fill="#fecaca" fill-opacity="0.65" stroke="#b91c1c" stroke-width="4" />
-  <text x="678" y="392" text-anchor="middle" font-size="26" fill="#991b1b">STAMP</text>
-  <line x1="584" y1="462" x2="786" y2="462" stroke="#111827" stroke-width="4" />
-  <text x="684" y="490" text-anchor="middle" font-size="18" fill="#111827">{$this->svgEscape($institution->leader_name ?? '-')}</text>
-</svg>
-SVG;
+        $svg = [];
+        $svg[] = sprintf(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">',
+            $widthPx,
+            $heightPx,
+            $widthPx,
+            $heightPx,
+        );
+        $svg[] = sprintf('<rect width="%d" height="%d" fill="#f8fafc" />', $widthPx, $heightPx);
+
+        $backgroundUri = $this->mediaDataUri($assetMap['template_background_front'] ?? null);
+        if ($backgroundUri !== null) {
+            $svg[] = sprintf(
+                '<image x="0" y="0" width="%d" height="%d" href="%s" preserveAspectRatio="none" />',
+                $widthPx,
+                $heightPx,
+                $this->svgEscape($backgroundUri),
+            );
+        }
+
+        foreach ($elements as $element) {
+            $type = (string) ($element['type'] ?? '');
+            $key = (string) ($element['key'] ?? '');
+            $xPx = $this->mmToPx($this->axisValue($element, 'x'), $pxPerMm);
+            $yPx = $this->mmToPx($this->axisValue($element, 'y'), $pxPerMm);
+            $wPx = $this->mmToPx($this->number($element['w'] ?? $element['w_mm'] ?? null, 0), $pxPerMm);
+            $hPx = $this->mmToPx($this->number($element['h'] ?? $element['h_mm'] ?? null, 0), $pxPerMm);
+            $opacity = $this->number($element['opacity'] ?? null, 1);
+
+            if (in_array($type, ['photo', 'image'], true)) {
+                $imageUri = $this->resolveImageDataUri($key, $assetMap);
+                if ($imageUri === null || $wPx <= 0 || $hPx <= 0) {
+                    continue;
+                }
+
+                $svg[] = sprintf(
+                    '<image x="%s" y="%s" width="%s" height="%s" href="%s" opacity="%s" preserveAspectRatio="xMidYMid slice" />',
+                    $this->fmt($xPx),
+                    $this->fmt($yPx),
+                    $this->fmt($wPx),
+                    $this->fmt($hPx),
+                    $this->svgEscape($imageUri),
+                    $this->fmt($opacity),
+                );
+                continue;
+            }
+
+            if ($type === 'text') {
+                $value = $this->resolveTextValue($key, $generatedCard);
+                if ($value === '') {
+                    continue;
+                }
+
+                $fontSizeMm = $this->number($element['font_size'] ?? $element['font_size_mm'] ?? null, 2.8);
+                $fontSizePx = $this->mmToPx($fontSizeMm, $pxPerMm);
+                $fontWeight = (string) ($element['font_weight'] ?? '400');
+                $fill = (string) ($element['color'] ?? '#111827');
+                $anchor = (string) ($element['text_anchor'] ?? 'start');
+                $svg[] = sprintf(
+                    '<text x="%s" y="%s" font-size="%s" font-weight="%s" fill="%s" opacity="%s" text-anchor="%s" dominant-baseline="hanging">%s</text>',
+                    $this->fmt($xPx),
+                    $this->fmt($yPx),
+                    $this->fmt($fontSizePx),
+                    $this->svgEscape($fontWeight),
+                    $this->svgEscape($fill),
+                    $this->fmt($opacity),
+                    $this->svgEscape($anchor),
+                    $this->svgEscape($value),
+                );
+            }
+        }
+
+        $svg[] = '</svg>';
+
+        return implode("\n", $svg);
     }
 
-    protected function backSvg(GeneratedCard $generatedCard): string
+    protected function backSvg(GeneratedCard $generatedCard, array $assetMap): string
     {
         $institution = $generatedCard->batch->institution;
+        $template = $generatedCard->template;
+        $canvasWidthMm = (float) $template->width_mm;
+        $canvasHeightMm = (float) $template->height_mm;
+        $pxPerMm = 10.0;
+        $widthPx = (int) max(1, round($canvasWidthMm * $pxPerMm));
+        $heightPx = (int) max(1, round($canvasHeightMm * $pxPerMm));
+        $backgroundUri = $this->mediaDataUri($assetMap['template_background_back'] ?? null);
 
-        return <<<SVG
-<svg xmlns="http://www.w3.org/2000/svg" width="856" height="540" viewBox="0 0 856 540">
-  <rect width="856" height="540" rx="28" fill="#082f49" />
-  <rect x="32" y="32" width="792" height="476" rx="24" fill="#0f172a" stroke="#38bdf8" stroke-width="4" />
-  <text x="428" y="130" text-anchor="middle" font-size="42" font-weight="700" fill="#e0f2fe">{$this->svgEscape($institution->name)}</text>
-  <text x="428" y="190" text-anchor="middle" font-size="28" fill="#bae6fd">Kartu sisi belakang</text>
-  <text x="428" y="286" text-anchor="middle" font-size="24" fill="#e2e8f0">Alamat: {$this->svgEscape($institution->address ?? '-')}</text>
-  <text x="428" y="326" text-anchor="middle" font-size="24" fill="#e2e8f0">Telepon: {$this->svgEscape($institution->phone ?? '-')}</text>
-  <text x="428" y="366" text-anchor="middle" font-size="24" fill="#e2e8f0">Email: {$this->svgEscape($institution->email ?? '-')}</text>
-  <text x="428" y="450" text-anchor="middle" font-size="18" fill="#7dd3fc">Generated by batch #{$generatedCard->batch_id}</text>
-</svg>
-SVG;
+        $svg = [];
+        $svg[] = sprintf(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">',
+            $widthPx,
+            $heightPx,
+            $widthPx,
+            $heightPx,
+        );
+        $svg[] = sprintf('<rect width="%d" height="%d" fill="#0f172a" />', $widthPx, $heightPx);
+
+        if ($backgroundUri !== null) {
+            $svg[] = sprintf(
+                '<image x="0" y="0" width="%d" height="%d" href="%s" preserveAspectRatio="none" />',
+                $widthPx,
+                $heightPx,
+                $this->svgEscape($backgroundUri),
+            );
+        }
+
+        $svg[] = sprintf(
+            '<text x="%d" y="%d" text-anchor="middle" font-size="%d" font-weight="700" fill="#e5e7eb">%s</text>',
+            (int) round($widthPx / 2),
+            (int) round($heightPx * 0.30),
+            22,
+            $this->svgEscape($institution->name),
+        );
+        $svg[] = sprintf(
+            '<text x="%d" y="%d" text-anchor="middle" font-size="%d" fill="#d1d5db">%s</text>',
+            (int) round($widthPx / 2),
+            (int) round($heightPx * 0.45),
+            14,
+            $this->svgEscape('Alamat: '.($institution->address ?? '-')),
+        );
+        $svg[] = sprintf(
+            '<text x="%d" y="%d" text-anchor="middle" font-size="%d" fill="#d1d5db">%s</text>',
+            (int) round($widthPx / 2),
+            (int) round($heightPx * 0.53),
+            14,
+            $this->svgEscape('Telepon: '.($institution->phone ?? '-')),
+        );
+        $svg[] = sprintf(
+            '<text x="%d" y="%d" text-anchor="middle" font-size="%d" fill="#d1d5db">%s</text>',
+            (int) round($widthPx / 2),
+            (int) round($heightPx * 0.61),
+            14,
+            $this->svgEscape('Email: '.($institution->email ?? '-')),
+        );
+        $svg[] = '</svg>';
+
+        return implode("\n", $svg);
     }
 
     protected function pdfDocument(GeneratedCard $generatedCard): string
@@ -215,9 +326,90 @@ SVG;
         return [
             'id' => $mediaAsset->id,
             'category' => $mediaAsset->category,
+            'disk' => $mediaAsset->disk,
+            'mime_type' => $mediaAsset->mime_type,
             'object_key' => $mediaAsset->object_key,
             'checksum' => $mediaAsset->checksum,
         ];
+    }
+
+    protected function resolveImageDataUri(string $key, array $assetMap): ?string
+    {
+        return match ($key) {
+            'student_photo' => $this->mediaDataUri($assetMap['student_photo'] ?? null),
+            'institution_logo' => $this->mediaDataUri($assetMap['institution_logo'] ?? null),
+            'institution_stamp' => $this->mediaDataUri($assetMap['institution_stamp'] ?? null),
+            'leader_signature' => $this->mediaDataUri($assetMap['leader_signature'] ?? null),
+            default => null,
+        };
+    }
+
+    protected function resolveTextValue(string $key, GeneratedCard $generatedCard): string
+    {
+        $student = $generatedCard->student;
+        $institution = $generatedCard->batch->institution;
+
+        return match ($key) {
+            'name', 'student_name' => (string) ($student->name ?? ''),
+            'student_code' => (string) ($student->student_code ?? ''),
+            'exam_number' => (string) ($student->exam_number ?? ''),
+            'class_name', 'classroom_name' => (string) ($student->classroom?->name ?? ''),
+            'institution_name' => (string) ($institution->name ?? ''),
+            'leader_name' => (string) ($institution->leader_name ?? ''),
+            'leader_title' => (string) ($institution->leader_title ?? ''),
+            'school_name' => (string) ($student->school_name ?? ''),
+            default => '',
+        };
+    }
+
+    protected function mediaDataUri(?MediaAsset $mediaAsset): ?string
+    {
+        if (! $mediaAsset) {
+            return null;
+        }
+
+        try {
+            $content = Storage::disk($mediaAsset->disk)->get($mediaAsset->object_key);
+        } catch (Throwable) {
+            return null;
+        }
+
+        $mimeType = $mediaAsset->mime_type ?: 'application/octet-stream';
+
+        return sprintf('data:%s;base64,%s', $mimeType, base64_encode($content));
+    }
+
+    protected function zIndex(array $element): int
+    {
+        return (int) ($element['z'] ?? $element['z_index'] ?? 10);
+    }
+
+    protected function axisValue(array $element, string $axis): float
+    {
+        return $this->number($element[$axis] ?? $element[$axis.'_mm'] ?? null, 0);
+    }
+
+    protected function number(mixed $value, float $default = 0): float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return $default;
+    }
+
+    protected function mmToPx(float $mm, float $pxPerMm): float
+    {
+        return $mm * $pxPerMm;
+    }
+
+    protected function fmt(float $value): string
+    {
+        return number_format($value, 2, '.', '');
     }
 
     protected function svgEscape(string $value): string

@@ -3,14 +3,15 @@
 namespace App\Jobs;
 
 use App\Models\Import;
-use App\Services\StudentImportService;
+use App\Models\User;
+use App\Services\StudentPhotoImportService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class ProcessStudentImportJob implements ShouldQueue
+class ProcessStudentPhotoImportJob implements ShouldQueue
 {
     use Dispatchable, Queueable;
 
@@ -23,7 +24,7 @@ class ProcessStudentImportJob implements ShouldQueue
     ) {
     }
 
-    public function handle(StudentImportService $studentImportService): void
+    public function handle(StudentPhotoImportService $studentPhotoImportService): void
     {
         $import = Import::query()->find($this->importId);
 
@@ -41,13 +42,15 @@ class ProcessStudentImportJob implements ShouldQueue
 
         try {
             $content = Storage::disk($this->disk)->get($this->storagePath);
-            $tmpPath = storage_path('app/private/tmp/import_'.Str::uuid().'.'.pathinfo($this->storagePath, PATHINFO_EXTENSION));
+            $tmpPath = storage_path('app/private/tmp/import_photo_'.Str::uuid().'.'.pathinfo($this->storagePath, PATHINFO_EXTENSION));
             @mkdir(dirname($tmpPath), 0775, true);
             file_put_contents($tmpPath, $content);
 
-            $result = $studentImportService->process(
+            $actor = User::query()->find($import->imported_by);
+            $result = $studentPhotoImportService->process(
                 $import,
                 $tmpPath,
+                $actor,
                 function (int $success, int $failed, int $total) use ($import): void {
                     $import->update([
                         'total_rows' => $total,

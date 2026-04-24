@@ -26,6 +26,10 @@ const navItems = computed(() => {
         items.push({ label: 'Users', route: 'users.index' });
     }
 
+    if (page.props.auth?.user?.role === 'guru') {
+        items.push({ label: 'Ketentuan', route: 'guru.ketentuan' });
+    }
+
     return items;
 });
 

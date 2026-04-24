@@ -1,6 +1,16 @@
 # Panduan Menyalakan Server Lokal (Docker Compose / Laravel Sail)
 
+Cara push ke github via SSH, ganti xxx dengan keterangan yg sesuai.
+
+```bash
+git add .
+git commit -m "xxx"
+git push origin main
+```
+
 Dokumen ini menjelaskan cara menjalankan project di laptop menggunakan Docker Compose melalui Laravel Sail.
+
+
 
 ## 1. Masuk ke folder project
 
@@ -128,4 +138,3 @@ Pastikan Docker Desktop (atau Docker Engine) sudah running, lalu ulangi:
 ```bash
 ./vendor/bin/sail up -d
 ```
-

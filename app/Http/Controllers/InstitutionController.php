@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SaveInstitutionRequest;
 use App\Models\Institution;
 use App\Models\MediaAsset;
+use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -63,7 +64,13 @@ class InstitutionController extends Controller
         $data['stamp_media_id'] = null;
         $data['leader_signature_media_id'] = null;
 
-        Institution::query()->create($data);
+        $institution = Institution::query()->create($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'institution.create',
+            subject: $institution,
+            request: $request,
+        );
 
         return back()->with('status', 'Institution created.');
     }
@@ -74,6 +81,12 @@ class InstitutionController extends Controller
         $data = $request->validated();
         $this->assertBrandingAssetsBelongToInstitution($institution, $data);
         $institution->update($data);
+        app(ActivityLogService::class)->write(
+            actor: $request->user(),
+            action: 'institution.update',
+            subject: $institution,
+            request: $request,
+        );
 
         return back()->with('status', 'Institution updated.');
     }
@@ -81,6 +94,12 @@ class InstitutionController extends Controller
     public function destroy(Institution $institution): RedirectResponse
     {
         abort_unless(request()->user()->isAdmin(), 403);
+        app(ActivityLogService::class)->write(
+            actor: request()->user(),
+            action: 'institution.delete',
+            subject: $institution,
+            request: request(),
+        );
 
         $institution->delete();
 
