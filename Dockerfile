@@ -24,7 +24,7 @@ COPY public ./public
 COPY vite.config.js postcss.config.js tailwind.config.js ./
 RUN npm run build
 
-FROM php:8.3-cli-alpine
+FROM php:8.4-cli-alpine
 WORKDIR /var/www/html
 
 RUN apk add --no-cache \
@@ -43,9 +43,7 @@ COPY --from=composer_deps /app/vendor ./vendor
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
 
-RUN cp .env.example .env \
-    && php artisan key:generate --force \
-    && mkdir -p storage/framework/{cache,sessions,views} \
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 8000
