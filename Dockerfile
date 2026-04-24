@@ -5,6 +5,7 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install \
     --no-dev \
+    --no-scripts \
     --no-interaction \
     --no-progress \
     --prefer-dist \
@@ -17,6 +18,7 @@ FROM node:22-alpine AS frontend
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
+COPY --from=composer_deps /app/vendor/tightenco/ziggy ./vendor/tightenco/ziggy
 COPY resources ./resources
 COPY public ./public
 COPY vite.config.js postcss.config.js tailwind.config.js ./
