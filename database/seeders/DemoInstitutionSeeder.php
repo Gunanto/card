@@ -29,6 +29,7 @@ class DemoInstitutionSeeder extends Seeder
                 'email' => 'info@smkcontoh.test',
                 'website' => 'https://smkcontoh.test',
                 'leader_name' => 'Dewi Lestari',
+                'leader_nip' => '197810102006042001',
                 'leader_title' => 'Kepala Sekolah',
             ],
         );

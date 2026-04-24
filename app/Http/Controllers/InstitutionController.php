@@ -36,6 +36,7 @@ class InstitutionController extends Controller
                 'email' => $institution->email,
                 'website' => $institution->website,
                 'leader_name' => $institution->leader_name,
+                'leader_nip' => $institution->leader_nip,
                 'leader_title' => $institution->leader_title,
                 'logo_media_id' => $institution->logo_media_id,
                 'stamp_media_id' => $institution->stamp_media_id,

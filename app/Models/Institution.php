@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'email',
     'website',
     'leader_name',
+    'leader_nip',
     'leader_title',
     'logo_media_id',
     'stamp_media_id',

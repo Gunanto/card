@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\CardTemplate;
+use App\Support\CardTemplateConfigSchema;
 use App\Support\DefaultCardTemplateData;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -10,6 +11,8 @@ use JsonException;
 
 class SaveCardTemplateRequest extends FormRequest
 {
+    protected ?array $normalizedConfigPayload = null;
+
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -57,15 +60,32 @@ class SaveCardTemplateRequest extends FormRequest
                 $validator->errors()->add('print_layout_json_text', 'Print layout JSON tidak valid.');
             }
 
-            if (is_array($config) && empty($config['elements'])) {
-                $validator->errors()->add('config_json_text', 'Config JSON harus memiliki elemen template.');
+            if (is_array($config)) {
+                foreach (CardTemplateConfigSchema::validate($config) as $error) {
+                    $validator->errors()->add('config_json_text', $error);
+                }
             }
         });
     }
 
     public function configPayload(): array
     {
-        return json_decode($this->string('config_json_text')->toString(), true, 512, JSON_THROW_ON_ERROR);
+        if ($this->normalizedConfigPayload !== null) {
+            return $this->normalizedConfigPayload;
+        }
+
+        $decoded = json_decode($this->string('config_json_text')->toString(), true, 512, JSON_THROW_ON_ERROR);
+        if (! is_array($decoded)) {
+            throw new JsonException('Config JSON harus berupa object JSON.');
+        }
+
+        $this->normalizedConfigPayload = CardTemplateConfigSchema::normalize(
+            $decoded,
+            (float) $this->input('width_mm', 85.6),
+            (float) $this->input('height_mm', 54),
+        );
+
+        return $this->normalizedConfigPayload;
     }
 
     public function printLayoutPayload(): array

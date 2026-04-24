@@ -7,19 +7,20 @@ class DefaultCardTemplateData
     public static function config(): array
     {
         return [
+            'schema_version' => 2,
             'canvas' => [
                 'width_mm' => 85.6,
                 'height_mm' => 54,
             ],
             'elements' => [
-                ['type' => 'photo', 'key' => 'student_photo', 'x' => 6, 'y' => 10, 'w' => 20, 'h' => 26, 'z' => 10],
-                ['type' => 'text', 'key' => 'name', 'x' => 30, 'y' => 14, 'font_size' => 10, 'font_weight' => '700', 'z' => 20],
-                ['type' => 'text', 'key' => 'student_code', 'x' => 30, 'y' => 20, 'font_size' => 8, 'z' => 20],
-                ['type' => 'image', 'key' => 'institution_logo', 'x' => 6, 'y' => 4, 'w' => 10, 'h' => 10, 'z' => 30],
-                ['type' => 'image', 'key' => 'institution_stamp', 'x' => 58, 'y' => 26, 'w' => 20, 'h' => 20, 'opacity' => 0.55, 'z' => 40],
-                ['type' => 'image', 'key' => 'leader_signature', 'x' => 58, 'y' => 40, 'w' => 20, 'h' => 8, 'z' => 50],
-                ['type' => 'text', 'key' => 'leader_name', 'x' => 58, 'y' => 49, 'font_size' => 6, 'z' => 60],
-                ['type' => 'text', 'key' => 'leader_title', 'x' => 58, 'y' => 52, 'font_size' => 5, 'z' => 60],
+                ['type' => 'photo', 'key' => 'student_photo', 'source' => 'media.student_photo', 'x' => 6, 'y' => 10, 'w' => 20, 'h' => 26, 'z' => 10],
+                ['type' => 'text', 'key' => 'student_name', 'mode' => 'dynamic', 'source' => 'student.name', 'x' => 30, 'y' => 14, 'font_size' => 3.2, 'font_weight' => '700', 'z' => 20],
+                ['type' => 'text', 'key' => 'student_code', 'mode' => 'dynamic', 'source' => 'student.student_code', 'x' => 30, 'y' => 20, 'font_size' => 2.6, 'z' => 21],
+                ['type' => 'image', 'key' => 'institution_logo', 'source' => 'media.institution_logo', 'x' => 6, 'y' => 4, 'w' => 10, 'h' => 10, 'z' => 30],
+                ['type' => 'image', 'key' => 'institution_stamp', 'source' => 'media.institution_stamp', 'x' => 58, 'y' => 26, 'w' => 20, 'h' => 20, 'opacity' => 0.55, 'z' => 40],
+                ['type' => 'image', 'key' => 'leader_signature', 'source' => 'media.leader_signature', 'x' => 58, 'y' => 40, 'w' => 20, 'h' => 8, 'z' => 50],
+                ['type' => 'text', 'key' => 'leader_name', 'mode' => 'dynamic', 'source' => 'institution.leader_name', 'x' => 58, 'y' => 49, 'font_size' => 1.8, 'z' => 60],
+                ['type' => 'text', 'key' => 'leader_title', 'mode' => 'dynamic', 'source' => 'institution.leader_title', 'x' => 58, 'y' => 52, 'font_size' => 1.5, 'z' => 61],
             ],
         ];
     }

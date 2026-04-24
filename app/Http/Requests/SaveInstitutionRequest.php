@@ -26,6 +26,7 @@ class SaveInstitutionRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
             'leader_name' => ['nullable', 'string', 'max:255'],
+            'leader_nip' => ['nullable', 'string', 'max:100'],
             'leader_title' => ['nullable', 'string', 'max:255'],
             'logo_media_id' => ['nullable', 'integer', 'exists:media_assets,id'],
             'stamp_media_id' => ['nullable', 'integer', 'exists:media_assets,id'],

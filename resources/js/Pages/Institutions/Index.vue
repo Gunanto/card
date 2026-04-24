@@ -25,6 +25,7 @@ const blankForm = () => ({
     email: '',
     website: '',
     leader_name: '',
+    leader_nip: '',
     leader_title: '',
     logo_media_id: '',
     stamp_media_id: '',
@@ -161,10 +162,14 @@ if (!props.canCreate && props.institutions[0]) {
                             <label class="mb-1 block text-sm font-medium text-gray-700">Website</label>
                             <input v-model="form.website" class="w-full rounded-lg border-gray-300 text-sm" type="url" />
                         </div>
-                        <div class="grid gap-4 md:grid-cols-2">
+                        <div class="grid gap-4 md:grid-cols-3">
                             <div>
                                 <label class="mb-1 block text-sm font-medium text-gray-700">Nama Pimpinan</label>
                                 <input v-model="form.leader_name" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">NIP Pimpinan</label>
+                                <input v-model="form.leader_nip" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
                             </div>
                             <div>
                                 <label class="mb-1 block text-sm font-medium text-gray-700">Jabatan Pimpinan</label>
@@ -258,6 +263,7 @@ if (!props.canCreate && props.institutions[0]) {
                                     </td>
                                     <td class="px-3 py-3 text-gray-600">
                                         <p>{{ institution.leader_name || '-' }}</p>
+                                        <p class="text-xs text-gray-500">NIP: {{ institution.leader_nip || '-' }}</p>
                                         <p>{{ institution.leader_title || '-' }}</p>
                                     </td>
                                     <td class="px-3 py-3 text-xs text-gray-500">

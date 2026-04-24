@@ -12,9 +12,11 @@ const props = defineProps({
     forcedInstitutionId: { type: [Number, null], required: false, default: null },
 });
 
+const configSchemaVersion = 2;
 const editingId = ref(null);
 const mmScale = 6; // 1mm => 6px in editor canvas
 const editorConfig = ref({
+    schema_version: configSchemaVersion,
     canvas: { width_mm: 85.6, height_mm: 54 },
     elements: [],
 });
@@ -26,6 +28,65 @@ const snapStepMm = ref(0.5);
 const historyStack = ref([]);
 const historyIndex = ref(-1);
 const applyingHistory = ref(false);
+
+const sourceByLegacyKey = {
+    name: 'student.name',
+    student_name: 'student.name',
+    student_code: 'student.student_code',
+    exam_number: 'student.exam_number',
+    class_name: 'student.classroom_name',
+    classroom_name: 'student.classroom_name',
+    school_name: 'student.school_name',
+    institution_name: 'institution.name',
+    institution_address: 'institution.address',
+    address: 'institution.address',
+    leader_name: 'institution.leader_name',
+    leader_nip: 'institution.leader_nip',
+    leader_title: 'institution.leader_title',
+    student_photo: 'media.student_photo',
+    institution_logo: 'media.institution_logo',
+    institution_stamp: 'media.institution_stamp',
+    leader_signature: 'media.leader_signature',
+};
+
+const legacyKeyBySource = {
+    'student.name': 'student_name',
+    'student.student_code': 'student_code',
+    'student.exam_number': 'exam_number',
+    'student.classroom_name': 'classroom_name',
+    'student.school_name': 'school_name',
+    'institution.name': 'institution_name',
+    'institution.address': 'institution_address',
+    'institution.leader_name': 'leader_name',
+    'institution.leader_nip': 'leader_nip',
+    'institution.leader_title': 'leader_title',
+    'media.student_photo': 'student_photo',
+    'media.institution_logo': 'institution_logo',
+    'media.institution_stamp': 'institution_stamp',
+    'media.leader_signature': 'leader_signature',
+};
+
+const textSourceOptions = [
+    { value: 'student.name', label: 'Student: Name' },
+    { value: 'student.student_code', label: 'Student: Student Code' },
+    { value: 'student.exam_number', label: 'Student: Exam Number' },
+    { value: 'student.classroom_name', label: 'Student: Classroom Name' },
+    { value: 'student.school_name', label: 'Student: School Name' },
+    { value: 'institution.name', label: 'Institution: Name' },
+    { value: 'institution.address', label: 'Institution: Address' },
+    { value: 'institution.phone', label: 'Institution: Phone' },
+    { value: 'institution.email', label: 'Institution: Email' },
+    { value: 'institution.leader_name', label: 'Institution: Leader Name' },
+    { value: 'institution.leader_nip', label: 'Institution: Leader NIP' },
+    { value: 'institution.leader_title', label: 'Institution: Leader Title' },
+];
+
+const imageSourceOptions = [
+    { value: 'media.student_photo', label: 'Media: Student Photo' },
+    { value: 'media.institution_logo', label: 'Media: Institution Logo' },
+    { value: 'media.institution_stamp', label: 'Media: Institution Stamp' },
+    { value: 'media.leader_signature', label: 'Media: Leader Signature' },
+];
 
 const blankForm = () => ({
     institution_id: props.forcedInstitutionId ?? '',
@@ -59,23 +120,45 @@ const snapMm = (value) => {
 };
 
 const createDefaultConfig = () => ({
+    schema_version: configSchemaVersion,
     canvas: {
         width_mm: toNumber(form.width_mm, 85.6),
         height_mm: toNumber(form.height_mm, 54),
     },
     elements: [
-        { type: 'photo', key: 'student_photo', x: 6, y: 10, w: 20, h: 26, z: 10 },
-        { type: 'text', key: 'name', x: 30, y: 14, font_size: 3.2, font_weight: '700', z: 20 },
-        { type: 'text', key: 'student_code', x: 30, y: 20, font_size: 2.6, z: 21 },
-        { type: 'image', key: 'institution_logo', x: 6, y: 4, w: 10, h: 10, z: 30 },
+        { type: 'photo', key: 'student_photo', source: 'media.student_photo', x: 6, y: 10, w: 20, h: 26, z: 10 },
+        { type: 'text', key: 'student_name', mode: 'dynamic', source: 'student.name', text: '', x: 30, y: 14, font_size: 3.2, font_weight: '700', z: 20 },
+        { type: 'text', key: 'student_code', mode: 'dynamic', source: 'student.student_code', text: '', x: 30, y: 20, font_size: 2.6, z: 21 },
+        { type: 'image', key: 'institution_logo', source: 'media.institution_logo', x: 6, y: 4, w: 10, h: 10, z: 30 },
     ],
 });
 
+const sourceFromRaw = (raw) => {
+    const explicit = typeof raw?.source === 'string' ? raw.source.trim() : '';
+    if (explicit !== '') return explicit;
+
+    const legacyKey = typeof raw?.key === 'string' ? raw.key.trim() : '';
+    if (legacyKey === '') return '';
+    return sourceByLegacyKey[legacyKey] ?? `legacy.${legacyKey}`;
+};
+
+const keyFromRaw = (raw, source, index) => {
+    const explicit = typeof raw?.key === 'string' ? raw.key.trim() : '';
+    if (explicit !== '') return explicit;
+    if (typeof source === 'string' && source.startsWith('legacy.')) {
+        const legacyKey = source.slice(7).trim();
+        if (legacyKey !== '') return legacyKey;
+    }
+    return legacyKeyBySource[source] ?? `element_${index + 1}`;
+};
+
 const normalizeElement = (raw, index) => {
     const type = ['text', 'photo', 'image'].includes(raw?.type) ? raw.type : 'text';
+    const source = sourceFromRaw(raw);
     const base = {
         type,
-        key: typeof raw?.key === 'string' ? raw.key : `element_${index + 1}`,
+        key: keyFromRaw(raw, source, index),
+        source,
         x: toNumber(raw?.x ?? raw?.x_mm, 0),
         y: toNumber(raw?.y ?? raw?.y_mm, 0),
         w: toNumber(raw?.w ?? raw?.w_mm, type === 'text' ? 0 : 20),
@@ -85,8 +168,13 @@ const normalizeElement = (raw, index) => {
     };
 
     if (type === 'text') {
+        const mode = ['dynamic', 'static'].includes(raw?.mode)
+            ? raw.mode
+            : ((typeof raw?.text === 'string' && raw.text.trim() !== '') ? 'static' : 'dynamic');
         return {
             ...base,
+            mode,
+            text: typeof raw?.text === 'string' ? raw.text : '',
             font_size: toNumber(raw?.font_size ?? raw?.font_size_mm, 2.8),
             font_weight: raw?.font_weight ? String(raw.font_weight) : '400',
             color: raw?.color ? String(raw.color) : '#111827',
@@ -108,6 +196,7 @@ const loadEditorFromForm = () => {
             : [];
 
         editorConfig.value = {
+            schema_version: toNumber(parsed?.schema_version, configSchemaVersion),
             canvas,
             elements: elements.length > 0 ? elements : createDefaultConfig().elements,
         };
@@ -124,6 +213,7 @@ const loadEditorFromForm = () => {
 const syncFormConfigText = () => {
     const sortedElements = [...editorConfig.value.elements].sort((a, b) => toNumber(a.z, 0) - toNumber(b.z, 0));
     form.config_json_text = JSON.stringify({
+        schema_version: configSchemaVersion,
         canvas: {
             width_mm: toNumber(editorConfig.value.canvas.width_mm, 85.6),
             height_mm: toNumber(editorConfig.value.canvas.height_mm, 54),
@@ -280,35 +370,252 @@ const sortedElements = computed(() => (
 const mmToPx = (mm) => toNumber(mm, 0) * mmScale;
 const pxToMm = (px) => px / mmScale;
 
-const previewTextByKey = (key) => {
-    const map = {
-        name: 'Nama Siswa',
-        student_name: 'Nama Siswa',
-        student_code: 'Kode Siswa',
-        exam_number: 'No Ujian',
-        class_name: 'Nama Kelas',
-        classroom_name: 'Nama Kelas',
-        institution_name: 'Nama Institusi',
-        leader_name: 'Nama Pimpinan',
-        leader_title: 'Jabatan Pimpinan',
-    };
-    return map[key] ?? key;
+const sourceLabel = (source) => {
+    const candidate = [...textSourceOptions, ...imageSourceOptions]
+        .find((item) => item.value === source);
+    return candidate?.label ?? source;
 };
 
-const addElement = (type) => {
+const selectedElementPreviewLabel = (element) => {
+    if (element.type === 'text') {
+        if (element.mode === 'static') {
+            return element.text?.trim() || '(Static Text)';
+        }
+
+        return sourceLabel(element.source || element.key || '');
+    }
+
+    return sourceLabel(element.source || element.key || '');
+};
+
+const ensureElementSourceDefaults = (element) => {
+    if (element.type === 'text') {
+        if (!['dynamic', 'static'].includes(element.mode)) {
+            element.mode = 'dynamic';
+        }
+        if (element.mode === 'dynamic' && (!element.source || !String(element.source).trim())) {
+            element.source = 'student.name';
+        }
+        return;
+    }
+
+    element.mode = 'dynamic';
+    if (!element.source || !String(element.source).trim()) {
+        element.source = element.type === 'photo' ? 'media.student_photo' : 'media.institution_logo';
+    }
+};
+
+const syncElementKeyFromSource = (element) => {
+    const source = typeof element.source === 'string' ? element.source.trim() : '';
+    if (source === '' || source.startsWith('legacy.')) return;
+
+    const mapped = legacyKeyBySource[source];
+    if (mapped) {
+        element.key = mapped;
+    }
+};
+
+const presetDefinitions = {
+    student_name: {
+        label: '+ Nama',
+        config: {
+            type: 'text',
+            source: 'student.name',
+            mode: 'dynamic',
+            text: '',
+            font_size: 3.2,
+            font_weight: '700',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+    exam_number: {
+        label: '+ No Ujian',
+        config: {
+            type: 'text',
+            source: 'student.exam_number',
+            mode: 'dynamic',
+            text: '',
+            font_size: 2.8,
+            font_weight: '500',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+    classroom_name: {
+        label: '+ Kelas',
+        config: {
+            type: 'text',
+            source: 'student.classroom_name',
+            mode: 'dynamic',
+            text: '',
+            font_size: 2.8,
+            font_weight: '500',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+    institution_name: {
+        label: '+ Nama Sekolah',
+        config: {
+            type: 'text',
+            source: 'institution.name',
+            mode: 'dynamic',
+            text: '',
+            font_size: 3,
+            font_weight: '700',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+    institution_address: {
+        label: '+ Alamat Sekolah',
+        config: {
+            type: 'text',
+            source: 'institution.address',
+            mode: 'dynamic',
+            text: '',
+            font_size: 2.2,
+            font_weight: '400',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+    no_urut_label: {
+        label: '+ Label No Urut',
+        config: {
+            type: 'text',
+            source: '',
+            mode: 'static',
+            text: 'NO URUT',
+            font_size: 2.8,
+            font_weight: '700',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+    no_urut_value: {
+        label: '+ Nilai No Urut',
+        config: {
+            type: 'text',
+            source: 'student.exam_number',
+            mode: 'dynamic',
+            text: '',
+            font_size: 2.8,
+            font_weight: '600',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+    institution_logo: {
+        label: '+ Logo',
+        config: {
+            type: 'image',
+            source: 'media.institution_logo',
+            mode: 'dynamic',
+            text: '',
+            w: 12,
+            h: 12,
+        },
+    },
+    student_photo: {
+        label: '+ Foto',
+        config: {
+            type: 'photo',
+            source: 'media.student_photo',
+            mode: 'dynamic',
+            text: '',
+            w: 20,
+            h: 26,
+        },
+    },
+    leader_signature: {
+        label: '+ TTD',
+        config: {
+            type: 'image',
+            source: 'media.leader_signature',
+            mode: 'dynamic',
+            text: '',
+            w: 20,
+            h: 8,
+        },
+    },
+    institution_stamp: {
+        label: '+ Stempel',
+        config: {
+            type: 'image',
+            source: 'media.institution_stamp',
+            mode: 'dynamic',
+            text: '',
+            w: 16,
+            h: 16,
+            opacity: 0.65,
+        },
+    },
+    leader_nip: {
+        label: '+ NIP Pimpinan',
+        config: {
+            type: 'text',
+            source: 'institution.leader_nip',
+            mode: 'dynamic',
+            text: '',
+            font_size: 2.2,
+            font_weight: '500',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+    static_label: {
+        label: '+ Label Statis',
+        config: {
+            type: 'text',
+            source: '',
+            mode: 'static',
+            text: 'LABEL',
+            font_size: 2.8,
+            font_weight: '600',
+            color: '#111827',
+            w: 0,
+            h: 0,
+        },
+    },
+};
+
+const elementPresets = Object.entries(presetDefinitions).map(([value, item]) => ({
+    value,
+    label: item.label,
+}));
+
+const addPresetElement = (presetKey) => {
+    const preset = presetDefinitions[presetKey];
+    if (!preset) return;
+
     const index = editorConfig.value.elements.length;
+    const { config } = preset;
+    const baseType = config.type;
     const item = normalizeElement({
-        type,
-        key: type === 'text' ? 'name' : (type === 'photo' ? 'student_photo' : 'institution_logo'),
+        type: baseType,
+        key: legacyKeyBySource[config.source] ?? '',
+        source: config.source,
+        mode: config.mode,
+        text: config.text,
         x: 5,
         y: 5 + (index * 2),
-        w: type === 'text' ? 0 : 20,
-        h: type === 'text' ? 0 : 12,
+        w: config.w,
+        h: config.h,
         z: (index + 1) * 10,
-        font_size: 2.8,
-        font_weight: '400',
-        color: '#111827',
-        opacity: 1,
+        font_size: config.font_size ?? 2.8,
+        font_weight: config.font_weight ?? '400',
+        color: config.color ?? '#111827',
+        opacity: config.opacity ?? 1,
     }, index);
 
     editorConfig.value.elements.push(item);
@@ -414,12 +721,20 @@ const applyCanvasSizeFromForm = () => {
 
 const onSelectedElementInput = () => {
     if (!selectedElement.value) return;
+    ensureElementSourceDefaults(selectedElement.value);
+    if (selectedElement.value.type === 'text' && selectedElement.value.mode !== 'static') {
+        syncElementKeyFromSource(selectedElement.value);
+    }
+    if (selectedElement.value.type !== 'text') {
+        syncElementKeyFromSource(selectedElement.value);
+    }
     normalizeElementBounds(selectedElement.value);
     syncFormConfigText();
 };
 
 const onSelectedElementCommit = () => {
     if (!selectedElement.value) return;
+    onSelectedElementInput();
     commitEditorChange();
 };
 
@@ -465,7 +780,7 @@ onBeforeUnmount(() => {
         </template>
 
         <div class="py-8">
-            <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[1.05fr,1.35fr] lg:px-8">
+            <div class="mx-auto flex max-w-7xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
                 <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                     <h3 class="text-lg font-semibold text-gray-900">{{ editingId ? 'Edit Template' : 'Buat Template' }}</h3>
                     <p class="mt-1 text-sm text-gray-500">Background media baru bisa dipilih setelah template memiliki ID dan file diunggah.</p>
@@ -557,14 +872,14 @@ onBeforeUnmount(() => {
                                     <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50" :disabled="!canRedo" @click="redoEditor">
                                         Redo
                                     </button>
-                                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700" @click="addElement('text')">
-                                        + Text
-                                    </button>
-                                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700" @click="addElement('photo')">
-                                        + Photo
-                                    </button>
-                                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700" @click="addElement('image')">
-                                        + Image
+                                    <button
+                                        v-for="preset in elementPresets"
+                                        :key="preset.value"
+                                        type="button"
+                                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700"
+                                        @click="addPresetElement(preset.value)"
+                                    >
+                                        {{ preset.label }}
                                     </button>
                                     <button type="button" class="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-700" :disabled="selectedElementIndex < 0" @click="removeSelectedElement">
                                         Hapus Elemen
@@ -575,7 +890,7 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
 
-                            <div class="mt-4 grid gap-4 xl:grid-cols-[1fr,260px]">
+                            <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr),320px]">
                                 <div class="overflow-auto rounded-lg border border-gray-200 bg-white p-4">
                                     <div
                                         class="relative rounded-md border border-dashed border-gray-300 bg-gradient-to-br from-white to-gray-100"
@@ -593,13 +908,13 @@ onBeforeUnmount(() => {
                                                 :class="selectedElementIndex === index ? 'border-sky-500 bg-sky-50 text-sky-900' : 'border-gray-300 bg-white text-gray-600'"
                                             >
                                                 <template v-if="element.type === 'text'">
-                                                    T: {{ previewTextByKey(element.key) }}
+                                                    T: {{ selectedElementPreviewLabel(element) }}
                                                 </template>
                                                 <template v-else-if="element.type === 'photo'">
-                                                    P: {{ element.key }}
+                                                    P: {{ selectedElementPreviewLabel(element) }}
                                                 </template>
                                                 <template v-else>
-                                                    I: {{ element.key }}
+                                                    I: {{ selectedElementPreviewLabel(element) }}
                                                 </template>
                                             </div>
                                             <div
@@ -628,8 +943,37 @@ onBeforeUnmount(() => {
                                                 <option value="image">image</option>
                                             </select>
                                         </label>
+                                        <template v-if="selectedElement.type === 'text'">
+                                            <label class="block">
+                                                <span class="mb-1 block text-gray-600">Mode</span>
+                                                <select v-model="selectedElement.mode" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                                    <option value="dynamic">dynamic</option>
+                                                    <option value="static">static</option>
+                                                </select>
+                                            </label>
+                                            <label v-if="selectedElement.mode === 'dynamic'" class="block">
+                                                <span class="mb-1 block text-gray-600">Source</span>
+                                                <select v-model="selectedElement.source" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                                    <option v-for="option in textSourceOptions" :key="option.value" :value="option.value">
+                                                        {{ option.label }}
+                                                    </option>
+                                                </select>
+                                            </label>
+                                            <label v-else class="block">
+                                                <span class="mb-1 block text-gray-600">Static Text</span>
+                                                <input v-model="selectedElement.text" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                            </label>
+                                        </template>
+                                        <label v-else class="block">
+                                            <span class="mb-1 block text-gray-600">Source</span>
+                                            <select v-model="selectedElement.source" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                                <option v-for="option in imageSourceOptions" :key="option.value" :value="option.value">
+                                                    {{ option.label }}
+                                                </option>
+                                            </select>
+                                        </label>
                                         <label class="block">
-                                            <span class="mb-1 block text-gray-600">Key</span>
+                                            <span class="mb-1 block text-gray-600">Legacy Key</span>
                                             <input v-model="selectedElement.key" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                         </label>
                                         <div class="grid grid-cols-2 gap-2">

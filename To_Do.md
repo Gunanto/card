@@ -92,3 +92,86 @@ MVP internal dianggap **selesai penuh** jika:
 - Hasil unduh PDF A4 2x5 konsisten ukuran cetak fisik.
 - Akses file private MinIO konsisten berdasarkan scope instansi.
 - Aktivitas sensitif tercatat di `activity_logs` dan bisa dimonitor dari UI admin.
+
+## 6) Rencana Implementasi: Template Background + Binding Data DB + Drag & Drop
+
+Target utama:
+- Background kartu disiapkan sebagai media template.
+- Data identitas sekolah/siswa diambil dinamis dari database.
+- Posisi elemen bisa diatur via drag-and-drop dan tersimpan di `config_json`.
+- Hasil preview editor konsisten dengan hasil generate kartu dan PDF.
+
+### Fase 1 - Kontrak Konfigurasi Elemen (config_json v2)
+- Definisikan schema elemen yang eksplisit (tanpa memutus kompatibilitas v1):
+  - `type`: `text | image | photo`
+  - `mode`: `dynamic | static` (khusus `text`)
+  - `source`: path data terstruktur (mis. `student.name`, `student.exam_number`, `institution.name`, `institution.leader_name`)
+  - `text`: nilai literal untuk label statis (mis. `NO URUT`, `Kepala Sekolah`)
+  - `x`, `y`, `w`, `h`, `z`, `opacity`, `font_size`, `font_weight`, `color`, `text_anchor`
+- Buat resolver backward compatibility:
+  - key lama (`name`, `student_code`, dst) tetap didukung.
+  - saat save template baru, serialisasi ke format v2.
+- Tambahkan validasi schema minimum di request template:
+  - elemen wajib punya field posisi valid.
+  - elemen `text` wajib salah satu: `mode=static+text` atau `mode=dynamic+source`.
+  - elemen `image/photo` wajib `source` valid.
+
+### Fase 2 - Data Binding Layer untuk Renderer
+- Implement `TemplateDataResolver` (service terpisah) yang menyiapkan payload render:
+  - `student.*` (name, student_code, exam_number, class_name, school_name, dll).
+  - `institution.*` (name, address, phone, email, leader_name, leader_title, dll).
+  - Media source (`student.photo`, `institution.logo`, `institution.stamp`, `institution.signature`, `template.background_front`, `template.background_back`).
+- Tambahkan strategy fallback:
+  - jika field kosong, gunakan string aman (`-`) sesuai konteks.
+  - jika media tidak ada, skip render elemen image/photo tanpa fail batch.
+
+### Fase 3 - Upgrade Visual Editor
+- Panel properti elemen di UI template:
+  - dropdown `Type`.
+  - untuk `text`: switch `Static/Dynamic`.
+  - jika `dynamic`: dropdown `Data Source` (daftar field DB terstandar).
+  - jika `static`: input `Text`.
+  - kontrol posisi/ukuran/typography tetap ada.
+- Tambahkan preset cepat:
+  - `+ Nama`, `+ Nomor Ujian`, `+ Kelas`, `+ Logo`, `+ Foto`, `+ TTD`, `+ Stempel`, `+ Label Statis`.
+- Pastikan `Reload Editor dari JSON` mendukung format v2 dan tidak menghapus properti baru.
+
+### Fase 4 - Konsistensi Output (Editor = Generate)
+- Refactor `RenderGeneratedCardJob` agar seluruh elemen dibaca dari resolver + schema v2.
+- Hentikan pembuatan PDF per-siswa placeholder berbasis `SimplePdf::fromLines`.
+- Ganti PDF per-siswa menjadi render visual kartu final (front/back) yang sama dengan editor.
+- Pertahankan snapshot asset (`asset_snapshot_json`) untuk audit reproduksibilitas.
+
+### Fase 5 - Layout Cetak A4 Dinamis
+- Implement parser `print_layout_json` ke engine A4:
+  - `page_size`, `orientation`, `rows`, `cols`, `gap_x_mm`, `gap_y_mm`,
+  - `page_margin_mm`, `card_size_mm`, `show_cut_guides`.
+- Ubah view PDF agar tidak hardcoded 2x5; gunakan parameter template aktif.
+- Tambahkan preset bawaan:
+  - A4 2x5 (ID card standar 85.6x54 mm),
+  - opsi orientasi portrait/landscape.
+
+### Fase 6 - Data Model Tambahan yang Dibutuhkan
+- Tambahkan field institusi yang umum di kartu ujian jika dibutuhkan desain:
+  - `leader_nip` (opsional).
+- (Opsional) Tambah field siswa:
+  - `exam_seat_number` / `exam_room` jika kebutuhan kartu ujian menuntut.
+- Sinkronkan form UI + import mapping untuk field tambahan ini.
+
+### Fase 7 - Keamanan Akses & Operasional
+- Perbaiki ownership media `generated_batch_pdf` agar scope institusi, bukan hanya uploader.
+- Verifikasi policy akses media untuk guru lintas user dalam institusi yang sama.
+- Pastikan runtime Docker production mendukung import ZIP/XLSX (aktifkan ekstensi `zip`).
+
+### Fase 8 - QA, UAT, dan Kriteria Terima
+- Tambah test feature minimum:
+  - generate batch dengan elemen static+dynamic.
+  - template global vs institusi.
+  - akses download batch PDF antar guru dalam institusi sama.
+- Buat test dataset UAT kartu ujian:
+  - data lengkap sekolah, pimpinan, siswa, foto.
+- Checklist acceptance:
+  - Background tampil tepat.
+  - Drag-and-drop tersimpan akurat.
+  - Field DB tampil sesuai source.
+  - Hasil PDF A4 konsisten dengan preview editor.

@@ -26,7 +26,7 @@ abstract class Controller
 
     protected function visibleInstitutions(User $user): Collection
     {
-        return $this->scopeByInstitution(Institution::query(), $user)
+        return $this->scopeByInstitution(Institution::query(), $user, 'id')
             ->orderBy('name')
             ->get();
     }

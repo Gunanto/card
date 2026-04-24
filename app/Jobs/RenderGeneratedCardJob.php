@@ -6,6 +6,7 @@ use App\Models\GenerateBatch;
 use App\Models\GeneratedCard;
 use App\Models\MediaAsset;
 use App\Services\MediaAssetService;
+use App\Services\TemplateDataResolver;
 use App\Support\SimplePdf;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -24,7 +25,7 @@ class RenderGeneratedCardJob implements ShouldQueue
     {
     }
 
-    public function handle(MediaAssetService $mediaAssetService): void
+    public function handle(MediaAssetService $mediaAssetService, TemplateDataResolver $templateDataResolver): void
     {
         $generatedCard = GeneratedCard::query()
             ->with([
@@ -78,7 +79,7 @@ class RenderGeneratedCardJob implements ShouldQueue
 
             $basePath = sprintf('generated/%d/%d', $batch->id, $student->id);
             $frontAsset = $mediaAssetService->storeContent(
-                $this->frontSvg($generatedCard, $assetMap),
+                $this->frontSvg($generatedCard, $assetMap, $templateDataResolver),
                 'generated_front',
                 $generatedCard,
                 $batch->requestedBy,
@@ -145,7 +146,7 @@ class RenderGeneratedCardJob implements ShouldQueue
         ]);
     }
 
-    protected function frontSvg(GeneratedCard $generatedCard, array $assetMap): string
+    protected function frontSvg(GeneratedCard $generatedCard, array $assetMap, TemplateDataResolver $templateDataResolver): string
     {
         $template = $generatedCard->template;
         $config = is_array($template->config_json) ? $template->config_json : [];
@@ -181,7 +182,6 @@ class RenderGeneratedCardJob implements ShouldQueue
 
         foreach ($elements as $element) {
             $type = (string) ($element['type'] ?? '');
-            $key = (string) ($element['key'] ?? '');
             $xPx = $this->mmToPx($this->axisValue($element, 'x'), $pxPerMm);
             $yPx = $this->mmToPx($this->axisValue($element, 'y'), $pxPerMm);
             $wPx = $this->mmToPx($this->number($element['w'] ?? $element['w_mm'] ?? null, 0), $pxPerMm);
@@ -189,7 +189,8 @@ class RenderGeneratedCardJob implements ShouldQueue
             $opacity = $this->number($element['opacity'] ?? null, 1);
 
             if (in_array($type, ['photo', 'image'], true)) {
-                $imageUri = $this->resolveImageDataUri($key, $assetMap);
+                $imageAsset = $templateDataResolver->resolveImageAsset($element, $assetMap);
+                $imageUri = $this->mediaDataUri($imageAsset);
                 if ($imageUri === null || $wPx <= 0 || $hPx <= 0) {
                     continue;
                 }
@@ -207,7 +208,7 @@ class RenderGeneratedCardJob implements ShouldQueue
             }
 
             if ($type === 'text') {
-                $value = $this->resolveTextValue($key, $generatedCard);
+                $value = $templateDataResolver->resolveTextValue($element, $generatedCard);
                 if ($value === '') {
                     continue;
                 }
@@ -331,35 +332,6 @@ class RenderGeneratedCardJob implements ShouldQueue
             'object_key' => $mediaAsset->object_key,
             'checksum' => $mediaAsset->checksum,
         ];
-    }
-
-    protected function resolveImageDataUri(string $key, array $assetMap): ?string
-    {
-        return match ($key) {
-            'student_photo' => $this->mediaDataUri($assetMap['student_photo'] ?? null),
-            'institution_logo' => $this->mediaDataUri($assetMap['institution_logo'] ?? null),
-            'institution_stamp' => $this->mediaDataUri($assetMap['institution_stamp'] ?? null),
-            'leader_signature' => $this->mediaDataUri($assetMap['leader_signature'] ?? null),
-            default => null,
-        };
-    }
-
-    protected function resolveTextValue(string $key, GeneratedCard $generatedCard): string
-    {
-        $student = $generatedCard->student;
-        $institution = $generatedCard->batch->institution;
-
-        return match ($key) {
-            'name', 'student_name' => (string) ($student->name ?? ''),
-            'student_code' => (string) ($student->student_code ?? ''),
-            'exam_number' => (string) ($student->exam_number ?? ''),
-            'class_name', 'classroom_name' => (string) ($student->classroom?->name ?? ''),
-            'institution_name' => (string) ($institution->name ?? ''),
-            'leader_name' => (string) ($institution->leader_name ?? ''),
-            'leader_title' => (string) ($institution->leader_title ?? ''),
-            'school_name' => (string) ($student->school_name ?? ''),
-            default => '',
-        };
     }
 
     protected function mediaDataUri(?MediaAsset $mediaAsset): ?string
