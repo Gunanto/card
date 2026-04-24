@@ -9,6 +9,7 @@ RUN composer install \
     --no-progress \
     --prefer-dist \
     --optimize-autoloader \
+    --ignore-platform-req=ext-gd \
     --ignore-platform-req=ext-pcntl \
     --ignore-platform-req=ext-redis
 
@@ -29,8 +30,12 @@ RUN apk add --no-cache \
     oniguruma-dev \
     postgresql-dev \
     icu-dev \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
     bash \
-    && docker-php-ext-install pdo pdo_pgsql intl
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_pgsql intl gd
 
 COPY --from=composer_deps /app/vendor ./vendor
 COPY . .
