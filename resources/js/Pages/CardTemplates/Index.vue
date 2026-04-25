@@ -90,6 +90,19 @@ const imageSourceOptions = [
     { value: 'media.leader_signature', label: 'Media: Leader Signature' },
 ];
 
+const textColorOptions = [
+    { value: '#FFFFFF', label: 'Putih' },
+    { value: '#000000', label: 'Hitam' },
+    { value: '#6B7280', label: 'Abu-abu' },
+    { value: '#EF4444', label: 'Merah' },
+    { value: '#F97316', label: 'Orange' },
+    { value: '#EAB308', label: 'Kuning' },
+    { value: '#22C55E', label: 'Hijau' },
+    { value: '#3B82F6', label: 'Biru' },
+    { value: '#8B5CF6', label: 'Ungu' },
+    { value: '#EC4899', label: 'Pink' },
+];
+
 const blankForm = () => ({
     institution_id: props.forcedInstitutionId ?? '',
     card_type_id: props.cardTypes[0]?.id ?? '',
@@ -370,12 +383,40 @@ const editTemplate = (template) => {
 };
 
 const submit = () => {
+    // Ensure in-progress drag/resize and input mutations are serialized before request.
+    endPointerInteraction();
+    commitEditorChange();
+
+    const normalizedId = (value) => {
+        const raw = typeof value === 'string' ? value.trim() : value;
+        if (raw === '' || raw === null || raw === undefined) return null;
+        const num = Number(raw);
+        return Number.isFinite(num) && num > 0 ? num : null;
+    };
+
+    form.transform((data) => ({
+        ...data,
+        institution_id: props.forcedInstitutionId ?? normalizedId(data.institution_id),
+        card_type_id: normalizedId(data.card_type_id),
+        background_front_media_id: normalizedId(data.background_front_media_id),
+        background_back_media_id: normalizedId(data.background_back_media_id),
+        width_mm: toNumber(data.width_mm, 85.6),
+        height_mm: toNumber(data.height_mm, 54),
+        is_active: Boolean(data.is_active),
+    }));
+
     if (editingId.value) {
-        form.put(route('card-templates.update', editingId.value), { preserveScroll: true });
+        form.put(route('card-templates.update', editingId.value), {
+            preserveScroll: true,
+            preserveState: false,
+        });
         return;
     }
 
-    form.post(route('card-templates.store'), { preserveScroll: true });
+    form.post(route('card-templates.store'), {
+        preserveScroll: true,
+        preserveState: false,
+    });
 };
 
 const destroyTemplate = (id) => {
@@ -412,6 +453,14 @@ const sourceLabel = (source) => {
         .find((item) => item.value === source);
     return candidate?.label ?? source;
 };
+
+const normalizeColorHex = (value, fallback = '#000000') => {
+    const raw = typeof value === 'string' ? value.trim() : '';
+    if (/^#([0-9a-fA-F]{6})$/.test(raw)) return raw.toUpperCase();
+    return fallback;
+};
+
+const hasTextColorOption = (value) => textColorOptions.some((option) => option.value === normalizeColorHex(value, ''));
 
 const selectedElementPreviewLabel = (element) => {
     if (element.type === 'text') {
@@ -486,6 +535,13 @@ const previewElementStyle = (element) => {
         width: `${toNumber(element.w, 20) * previewScale}px`,
         height: `${toNumber(element.h, 10) * previewScale}px`,
     };
+};
+
+const previewTextValue = (element) => {
+    if (element.type !== 'text') return '';
+    return element.mode === 'static'
+        ? (element.text?.trim() || '(Static Text)')
+        : sourceLabel(element.source || element.key || '');
 };
 
 const ensureElementSourceDefaults = (element) => {
@@ -741,6 +797,29 @@ const elementStyle = (element) => ({
     opacity: toNumber(element.opacity, 1),
 });
 
+const editorTextValue = (element) => {
+    if (element.type !== 'text') return '';
+    if (element.mode === 'static') {
+        return element.text?.trim() || '(Static Text)';
+    }
+
+    return sourceLabel(element.source || element.key || '');
+};
+
+const editorTextStyle = (element, index) => ({
+    color: element.color || '#111827',
+    fontSize: `${mmToPx(toNumber(element.font_size, 2.8))}px`,
+    fontWeight: element.font_weight || '400',
+    lineHeight: 1,
+    whiteSpace: 'nowrap',
+    backgroundColor: selectedElementIndex.value === index ? 'rgba(14,165,233,0.08)' : 'transparent',
+    outline: selectedElementIndex.value === index ? '1px dashed #0ea5e9' : 'none',
+    outlineOffset: '1px',
+    padding: selectedElementIndex.value === index ? '1px 2px' : '0',
+    borderRadius: '2px',
+    pointerEvents: 'none',
+});
+
 const startElementDrag = (event, index) => {
     if (event.button !== 0) return;
     selectedElementIndex.value = index;
@@ -828,6 +907,9 @@ const onSelectedElementInput = () => {
     if (selectedElement.value.type !== 'text') {
         syncElementKeyFromSource(selectedElement.value);
     }
+    if (selectedElement.value.type === 'text') {
+        selectedElement.value.color = normalizeColorHex(selectedElement.value.color, '#000000');
+    }
     normalizeElementBounds(selectedElement.value);
     syncFormConfigText();
 };
@@ -881,7 +963,7 @@ onBeforeUnmount(() => {
 
         <div class="py-8">
             <div class="mx-auto flex max-w-7xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <section class="order-2 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                     <h3 class="text-lg font-semibold text-gray-900">{{ editingId ? 'Edit Template' : 'Buat Template' }}</h3>
                     <p class="mt-1 text-sm text-gray-500">Background media baru bisa dipilih setelah template memiliki ID dan file diunggah.</p>
                     <div v-if="statusMessage" class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
@@ -1022,20 +1104,24 @@ onBeforeUnmount(() => {
                                             class="group cursor-move select-none"
                                             @mousedown="startElementDrag($event, index)"
                                         >
-                                            <div
-                                                class="rounded border px-1 py-0.5 text-[10px] leading-tight"
-                                                :class="selectedElementIndex === index ? 'border-sky-500 bg-sky-50 text-sky-900' : 'border-gray-300 bg-white text-gray-600'"
-                                            >
-                                                <template v-if="element.type === 'text'">
-                                                    T: {{ selectedElementPreviewLabel(element) }}
-                                                </template>
-                                                <template v-else-if="element.type === 'photo'">
-                                                    P: {{ selectedElementPreviewLabel(element) }}
-                                                </template>
-                                                <template v-else>
-                                                    I: {{ selectedElementPreviewLabel(element) }}
-                                                </template>
-                                            </div>
+                                            <template v-if="element.type === 'text'">
+                                                <div :style="editorTextStyle(element, index)">
+                                                    {{ editorTextValue(element) }}
+                                                </div>
+                                            </template>
+                                            <template v-else>
+                                                <div
+                                                    class="rounded border px-1 py-0.5 text-[10px] leading-tight"
+                                                    :class="selectedElementIndex === index ? 'border-sky-500 bg-sky-50 text-sky-900' : 'border-gray-300 bg-white text-gray-600'"
+                                                >
+                                                    <template v-if="element.type === 'photo'">
+                                                        P: {{ selectedElementPreviewLabel(element) }}
+                                                    </template>
+                                                    <template v-else>
+                                                        I: {{ selectedElementPreviewLabel(element) }}
+                                                    </template>
+                                                </div>
+                                            </template>
                                             <div
                                                 v-if="element.type !== 'text'"
                                                 class="absolute bottom-0 right-0 h-3 w-3 cursor-se-resize rounded-sm border border-sky-500 bg-sky-400"
@@ -1137,7 +1223,17 @@ onBeforeUnmount(() => {
                                         </div>
                                         <label v-if="selectedElement.type === 'text'" class="block">
                                             <span class="mb-1 block text-gray-600">Color</span>
-                                            <input v-model="selectedElement.color" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                            <select v-model="selectedElement.color" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                                <option
+                                                    v-if="selectedElement.color && !hasTextColorOption(selectedElement.color)"
+                                                    :value="selectedElement.color"
+                                                >
+                                                    Current → {{ selectedElement.color }}
+                                                </option>
+                                                <option v-for="option in textColorOptions" :key="option.value" :value="option.value">
+                                                    {{ option.label }} → {{ option.value }}
+                                                </option>
+                                            </select>
                                         </label>
                                     </div>
                                     <p v-else class="mt-3 text-xs text-gray-500">
@@ -1176,7 +1272,7 @@ onBeforeUnmount(() => {
                     </form>
                 </section>
 
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <section class="order-1 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                     <h3 class="text-lg font-semibold text-gray-900">Daftar Template</h3>
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -1290,7 +1386,9 @@ onBeforeUnmount(() => {
                                     :style="previewElementStyle(element)"
                                 >
                                     <template v-if="element.type === 'text'">
-                                        {{ element.mode === 'static' ? element.text : selectedElementPreviewLabel(element) }}
+                                        <span class="inline-flex rounded border border-sky-300 bg-white/90 px-1 py-0.5 text-[10px] font-medium leading-tight text-sky-900 shadow-sm">
+                                            T: {{ previewTextValue(element) }}
+                                        </span>
                                     </template>
                                     <template v-else>
                                         <div class="flex h-full w-full items-center justify-center rounded border border-dashed border-gray-400 bg-white/70 text-[10px] font-medium text-gray-500">

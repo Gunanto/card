@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -109,7 +110,9 @@ class GenerateBatchController extends Controller
 
         $options = $request->optionsPayload();
 
-        $batch = DB::transaction(function () use ($students, $template, $user, $institutionId, $options): GenerateBatch {
+        $dispatchCardIds = [];
+
+        $batch = DB::transaction(function () use ($students, $template, $user, $institutionId, $options, &$dispatchCardIds): GenerateBatch {
             $batch = GenerateBatch::query()->create([
                 'template_id' => $template->id,
                 'requested_by' => $user->id,
@@ -130,10 +133,15 @@ class GenerateBatchController extends Controller
                     'status' => 'pending',
                 ]);
 
-                RenderGeneratedCardJob::dispatch($generatedCard->id);
+                $dispatchCardIds[] = (int) $generatedCard->id;
             }
             return $batch;
         });
+
+        foreach ($dispatchCardIds as $generatedCardId) {
+            RenderGeneratedCardJob::dispatch($generatedCardId)->afterCommit();
+        }
+
         app(ActivityLogService::class)->write(
             actor: $request->user(),
             action: 'generate_batch.create',
@@ -175,19 +183,39 @@ class GenerateBatchController extends Controller
         return redirect()->route('media-assets.download', $mediaAsset);
     }
 
+    public function destroy(Request $request, GenerateBatch $generateBatch): RedirectResponse
+    {
+        $user = $request->user();
+        $this->ensureInstitutionAccess($user, $generateBatch->institution_id);
+        abort_unless(in_array($generateBatch->status, ['done', 'failed'], true), 422, 'Batch masih berjalan dan belum bisa dihapus.');
+
+        DB::transaction(function () use ($generateBatch): void {
+            $generateBatch->loadMissing('generatedCards');
+            $generatedCardIds = $generateBatch->generatedCards->pluck('id')->map(fn ($id): int => (int) $id)->all();
+            $mediaAssets = $this->mediaAssetsForBatch($generateBatch, $generatedCardIds);
+
+            foreach ($mediaAssets as $mediaAsset) {
+                $this->deleteMediaAssetObject($mediaAsset);
+                $mediaAsset->delete();
+            }
+
+            $generateBatch->delete();
+        });
+
+        app(ActivityLogService::class)->write(
+            actor: $user,
+            action: 'generate_batch.delete',
+            subject: $generateBatch,
+            request: $request,
+        );
+
+        return back()->with('status', 'Batch deleted.');
+    }
+
     protected function resolveOrGenerateBatchPdf(GenerateBatch $batch, User $user, BatchPdfService $batchPdfService): MediaAsset
     {
         $options = is_array($batch->options_json) ? $batch->options_json : [];
-        $existingId = $options['a4_pdf_media_id'] ?? null;
-
-        if (is_int($existingId) || ctype_digit((string) $existingId)) {
-            $existing = MediaAsset::query()->find((int) $existingId);
-
-            if ($existing && $this->canAccessMediaAsset($user, $existing)) {
-                return $existing;
-            }
-        }
-
+        // Always regenerate A4 so the output follows latest rendered cards/template changes.
         $mediaAsset = $batchPdfService->generateAndStore($batch, $user);
         $options['a4_pdf_media_id'] = $mediaAsset->id;
         $batch->update(['options_json' => $options]);
@@ -214,5 +242,68 @@ class GenerateBatchController extends Controller
             'generateBatch' => $batch,
             'as_json' => 1,
         ]);
+    }
+
+    protected function mediaAssetsForBatch(GenerateBatch $batch, array $generatedCardIds)
+    {
+        $ids = GeneratedCard::query()
+            ->whereIn('id', $generatedCardIds)
+            ->whereNotNull('front_media_id')
+            ->pluck('front_media_id')
+            ->merge(
+                GeneratedCard::query()
+                    ->whereIn('id', $generatedCardIds)
+                    ->whereNotNull('back_media_id')
+                    ->pluck('back_media_id'),
+            )
+            ->merge(
+                GeneratedCard::query()
+                    ->whereIn('id', $generatedCardIds)
+                    ->whereNotNull('pdf_media_id')
+                    ->pluck('pdf_media_id'),
+            )
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->values();
+
+        $batchA4AssetId = data_get($batch->options_json, 'a4_pdf_media_id');
+        if (is_numeric($batchA4AssetId)) {
+            $ids->push((int) $batchA4AssetId);
+        }
+
+        $ownerAssets = MediaAsset::query()
+            ->where(function ($query) use ($batch, $generatedCardIds): void {
+                $query
+                    ->where(function ($ownerQuery) use ($generatedCardIds): void {
+                        if ($generatedCardIds === []) {
+                            $ownerQuery->whereRaw('1=0');
+
+                            return;
+                        }
+
+                        $ownerQuery
+                            ->where('owner_type', 'generated_card')
+                            ->whereIn('owner_id', $generatedCardIds);
+                    })
+                    ->orWhere(function ($ownerQuery) use ($batch): void {
+                        $ownerQuery
+                            ->where('owner_type', GenerateBatch::class)
+                            ->where('owner_id', $batch->id);
+                    });
+            })
+            ->pluck('id');
+
+        return MediaAsset::query()
+            ->whereIn('id', $ids->merge($ownerAssets)->unique()->values()->all())
+            ->get();
+    }
+
+    protected function deleteMediaAssetObject(MediaAsset $mediaAsset): void
+    {
+        try {
+            Storage::disk($mediaAsset->disk)->delete($mediaAsset->object_key);
+        } catch (\Throwable) {
+            // noop: deleting DB record is enough to hide stale references from UI.
+        }
     }
 }

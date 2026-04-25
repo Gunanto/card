@@ -1,0 +1,43 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 436 >>
+stream
+BT
+/F1 12 Tf
+1 0 0 1 48 790 Tm (Card App MVP Export) Tj
+1 0 0 1 48 772 Tm (Batch ID: 2) Tj
+1 0 0 1 48 754 Tm (Generated Card ID: 3) Tj
+1 0 0 1 48 736 Tm (Institution: SMP Negeri 1 Punggur) Tj
+1 0 0 1 48 718 Tm (Template: Kartu Ujian-1) Tj
+1 0 0 1 48 700 Tm (Student: Alya Putri) Tj
+1 0 0 1 48 682 Tm (Student Code: SIS-0001) Tj
+1 0 0 1 48 664 Tm (Exam Number: UJ-2026-0001) Tj
+1 0 0 1 48 646 Tm (Generated At: 2026-04-25 01:46:05) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+798
+%%EOF

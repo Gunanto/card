@@ -26,6 +26,26 @@ services:
             - redis
             - minio
             - mailpit
+    queue-worker:
+        build:
+            context: './vendor/laravel/sail/runtimes/8.5'
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: 'sail-8.5/app'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - pgsql
+            - redis
+            - minio
+        command: php artisan queue:work redis --queue=default --sleep=1 --tries=1 --timeout=120
+        restart: unless-stopped
     pgsql:
         image: 'postgres:18-alpine'
         ports:

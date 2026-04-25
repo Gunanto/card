@@ -7,7 +7,7 @@ use App\Models\GeneratedCard;
 use App\Models\MediaAsset;
 use App\Services\MediaAssetService;
 use App\Services\TemplateDataResolver;
-use App\Support\SimplePdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
@@ -78,8 +78,11 @@ class RenderGeneratedCardJob implements ShouldQueue
             ];
 
             $basePath = sprintf('generated/%d/%d', $batch->id, $student->id);
+            $frontSvg = $this->frontSvg($generatedCard, $assetMap, $templateDataResolver);
+            $backSvg = $this->backSvg($generatedCard, $assetMap);
+
             $frontAsset = $mediaAssetService->storeContent(
-                $this->frontSvg($generatedCard, $assetMap, $templateDataResolver),
+                $frontSvg,
                 'generated_front',
                 $generatedCard,
                 $batch->requestedBy,
@@ -88,7 +91,7 @@ class RenderGeneratedCardJob implements ShouldQueue
                 'image/svg+xml',
             );
             $backAsset = $mediaAssetService->storeContent(
-                $this->backSvg($generatedCard, $assetMap),
+                $backSvg,
                 'generated_back',
                 $generatedCard,
                 $batch->requestedBy,
@@ -97,7 +100,7 @@ class RenderGeneratedCardJob implements ShouldQueue
                 'image/svg+xml',
             );
             $pdfAsset = $mediaAssetService->storeContent(
-                $this->pdfDocument($generatedCard),
+                $this->pdfDocument($generatedCard, $frontSvg, $backSvg),
                 'generated_pdf',
                 $generatedCard,
                 $batch->requestedBy,
@@ -173,14 +176,24 @@ class RenderGeneratedCardJob implements ShouldQueue
         $backgroundUri = $this->mediaDataUri($assetMap['template_background_front'] ?? null);
         if ($backgroundUri !== null) {
             $svg[] = sprintf(
-                '<image x="0" y="0" width="%d" height="%d" href="%s" preserveAspectRatio="none" />',
+                '<image x="0" y="0" width="%d" height="%d" href="%s" preserveAspectRatio="xMidYMid slice" />',
                 $widthPx,
                 $heightPx,
                 $this->svgEscape($backgroundUri),
             );
         }
 
-        foreach ($elements as $element) {
+        $nonTextElements = array_values(array_filter(
+            $elements,
+            fn (array $element): bool => (string) ($element['type'] ?? '') !== 'text',
+        ));
+        $textElements = array_values(array_filter(
+            $elements,
+            fn (array $element): bool => (string) ($element['type'] ?? '') === 'text',
+        ));
+
+        // Render text last to keep dynamic values readable above background/overlay images.
+        foreach (array_merge($nonTextElements, $textElements) as $element) {
             $type = (string) ($element['type'] ?? '');
             $xPx = $this->mmToPx($this->axisValue($element, 'x'), $pxPerMm);
             $yPx = $this->mmToPx($this->axisValue($element, 'y'), $pxPerMm);
@@ -218,11 +231,15 @@ class RenderGeneratedCardJob implements ShouldQueue
                 $fontWeight = (string) ($element['font_weight'] ?? '400');
                 $fill = (string) ($element['color'] ?? '#111827');
                 $anchor = (string) ($element['text_anchor'] ?? 'start');
+                // Many PDF/SVG renderers treat y as baseline and may ignore dominant-baseline.
+                // Shift y to baseline so coordinates behave closer to top-left positioning in editor.
+                $textBaselineYPx = $yPx + ($fontSizePx * 0.84);
                 $svg[] = sprintf(
-                    '<text x="%s" y="%s" font-size="%s" font-weight="%s" fill="%s" opacity="%s" text-anchor="%s" dominant-baseline="hanging">%s</text>',
+                    '<text x="%s" y="%s" font-size="%s" font-family="%s" font-weight="%s" fill="%s" opacity="%s" text-anchor="%s">%s</text>',
                     $this->fmt($xPx),
-                    $this->fmt($yPx),
+                    $this->fmt($textBaselineYPx),
                     $this->fmt($fontSizePx),
+                    $this->svgEscape('DejaVu Sans, Arial, sans-serif'),
                     $this->svgEscape($fontWeight),
                     $this->svgEscape($fill),
                     $this->fmt($opacity),
@@ -260,7 +277,7 @@ class RenderGeneratedCardJob implements ShouldQueue
 
         if ($backgroundUri !== null) {
             $svg[] = sprintf(
-                '<image x="0" y="0" width="%d" height="%d" href="%s" preserveAspectRatio="none" />',
+                '<image x="0" y="0" width="%d" height="%d" href="%s" preserveAspectRatio="xMidYMid slice" />',
                 $widthPx,
                 $heightPx,
                 $this->svgEscape($backgroundUri),
@@ -300,22 +317,81 @@ class RenderGeneratedCardJob implements ShouldQueue
         return implode("\n", $svg);
     }
 
-    protected function pdfDocument(GeneratedCard $generatedCard): string
+    protected function pdfDocument(GeneratedCard $generatedCard, string $frontSvg, string $backSvg): string
     {
+        $template = $generatedCard->template;
         $student = $generatedCard->student;
-        $institution = $generatedCard->batch->institution;
+        $cardWidthMm = max(20.0, (float) $template->width_mm);
+        $cardHeightMm = max(20.0, (float) $template->height_mm);
+        $marginMm = 8.0;
+        $gapMm = 6.0;
+        $paperWidthPt = $this->mmToPt($cardWidthMm + ($marginMm * 2));
+        $paperHeightPt = $this->mmToPt(($cardHeightMm * 2) + ($marginMm * 2) + $gapMm);
 
-        return SimplePdf::fromLines([
-            'Card App MVP Export',
-            'Batch ID: '.$generatedCard->batch_id,
-            'Generated Card ID: '.$generatedCard->id,
-            'Institution: '.$institution->name,
-            'Template: '.$generatedCard->template->name,
-            'Student: '.$student->name,
-            'Student Code: '.$student->student_code,
-            'Exam Number: '.($student->exam_number ?? '-'),
-            'Generated At: '.now()->toDateTimeString(),
-        ]);
+        $studentLabel = $this->htmlEscape($student->name.' / '.$student->student_code);
+        $frontUri = $this->svgDataUri($frontSvg);
+        $backUri = $this->svgDataUri($backSvg);
+        $html = <<<HTML
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page { margin: 0; }
+        body {
+            margin: 0;
+            padding: {$marginMm}mm;
+            font-family: DejaVu Sans, sans-serif;
+            color: #111827;
+        }
+        .card {
+            width: {$cardWidthMm}mm;
+            height: {$cardHeightMm}mm;
+            border: 0.3mm solid #d1d5db;
+            overflow: hidden;
+        }
+        .card + .card {
+            margin-top: {$gapMm}mm;
+        }
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            display: block;
+        }
+        .meta {
+            margin-top: 2mm;
+            font-size: 9px;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <div class="card"><img src="{$frontUri}" alt="Front card" /></div>
+    <div class="card"><img src="{$backUri}" alt="Back card" /></div>
+    <div class="meta">{$studentLabel}</div>
+</body>
+</html>
+HTML;
+
+        return Pdf::loadHTML($html)
+            ->setPaper([0, 0, $paperWidthPt, $paperHeightPt], 'portrait')
+            ->output();
+    }
+
+    protected function svgDataUri(string $svg): string
+    {
+        return sprintf('data:image/svg+xml;base64,%s', base64_encode($svg));
+    }
+
+    protected function mmToPt(float $mm): float
+    {
+        return $mm * 72 / 25.4;
+    }
+
+    protected function htmlEscape(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_HTML5);
     }
 
     protected function mediaSnapshot(?MediaAsset $mediaAsset): ?array
@@ -348,7 +424,43 @@ class RenderGeneratedCardJob implements ShouldQueue
 
         $mimeType = $mediaAsset->mime_type ?: 'application/octet-stream';
 
+        // DomPDF often fails to render WEBP inside nested SVG <image> tags.
+        // Convert WEBP bytes to PNG so template backgrounds stay visible in generated PDFs.
+        if ($mimeType === 'image/webp') {
+            $converted = $this->convertImageToPng($content);
+            if ($converted !== null) {
+                $content = $converted;
+                $mimeType = 'image/png';
+            }
+        }
+
         return sprintf('data:%s;base64,%s', $mimeType, base64_encode($content));
+    }
+
+    protected function convertImageToPng(string $content): ?string
+    {
+        if (! function_exists('imagecreatefromstring') || ! function_exists('imagepng')) {
+            return null;
+        }
+
+        $image = @imagecreatefromstring($content);
+        if ($image === false) {
+            return null;
+        }
+
+        imagealphablending($image, true);
+        imagesavealpha($image, true);
+
+        ob_start();
+        $ok = imagepng($image);
+        $png = ob_get_clean();
+        imagedestroy($image);
+
+        if (! $ok || ! is_string($png) || $png === '') {
+            return null;
+        }
+
+        return $png;
     }
 
     protected function zIndex(array $element): int

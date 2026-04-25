@@ -23,17 +23,20 @@
         }
         .grid {
             width: 176.2mm;
-            border-collapse: separate;
-            border-spacing: 5mm 5mm;
+            border-collapse: collapse;
             table-layout: fixed;
-            margin-left: -5mm;
-            margin-top: -5mm;
         }
         .card-cell {
             width: 85.6mm;
             height: 54mm;
             padding: 0;
             vertical-align: top;
+        }
+        .card-cell-gap-x {
+            padding-right: 3mm;
+        }
+        .card-cell-gap-y {
+            padding-bottom: 3mm;
         }
         .card {
             width: 85.6mm;
@@ -79,7 +82,7 @@
                 <tr>
                     @for($col = 0; $col < 2; $col++)
                         @php $index = ($row * 2) + $col; @endphp
-                        <td class="card-cell">
+                        <td class="card-cell {{ $col === 0 ? 'card-cell-gap-x' : '' }} {{ $row < 4 ? 'card-cell-gap-y' : '' }}">
                             @if(isset($chunk[$index]))
                                 <div class="card">
                                     @if(!empty($chunk[$index]['front_image_data_uri']))
@@ -104,4 +107,3 @@
 @endforeach
 </body>
 </html>
-

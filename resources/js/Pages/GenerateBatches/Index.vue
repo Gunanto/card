@@ -228,6 +228,17 @@ const downloadBatchA4Pdf = async (batch) => {
     }
 };
 
+const deleteBatch = (batch) => {
+    if (!['done', 'failed'].includes(batch.status)) return;
+
+    const ok = window.confirm(`Hapus Batch #${batch.id} yang sudah ${batch.status}? Riwayat dan file hasil generate akan dihapus.`);
+    if (!ok) return;
+
+    router.delete(route('generate-batches.destroy', batch.id), {
+        preserveScroll: true,
+    });
+};
+
 onMounted(() => {
     intervalId = window.setInterval(() => {
         if (autoRefresh.value && hasRunningBatch()) {
@@ -364,14 +375,24 @@ onBeforeUnmount(() => {
                                     <p v-if="batch.total_cards > 0" class="text-xs text-gray-500">
                                         progress: {{ Math.round(((batch.success_count + batch.failed_count) / batch.total_cards) * 100) }}%
                                     </p>
-                                    <button
-                                        v-if="batch.a4_pdf_resolve_url"
-                                        type="button"
-                                        class="mt-2 inline-block rounded-lg border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-700"
-                                        @click="downloadBatchA4Pdf(batch)"
-                                    >
-                                        Download PDF A4 2x5
-                                    </button>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <button
+                                            v-if="batch.a4_pdf_resolve_url"
+                                            type="button"
+                                            class="inline-block rounded-lg border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-700"
+                                            @click="downloadBatchA4Pdf(batch)"
+                                        >
+                                            Download PDF A4 2x5
+                                        </button>
+                                        <button
+                                            v-if="['done', 'failed'].includes(batch.status)"
+                                            type="button"
+                                            class="inline-block rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-700"
+                                            @click="deleteBatch(batch)"
+                                        >
+                                            Hapus Batch
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mt-4 overflow-x-auto">

@@ -100,6 +100,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/generate-batches', [GenerateBatchController::class, 'index'])->name('generate-batches.index');
     Route::post('/generate-batches', [GenerateBatchController::class, 'store'])->name('generate-batches.store');
+    Route::delete('/generate-batches/{generateBatch}', [GenerateBatchController::class, 'destroy'])->name('generate-batches.destroy');
     Route::get('/generate-batches/{generateBatch}/download-a4', [GenerateBatchController::class, 'downloadA4Pdf'])->name('generate-batches.download-a4');
 
     Route::middleware('role:admin')->group(function () {
