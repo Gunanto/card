@@ -40,7 +40,7 @@ class StoreMediaAssetRequest extends FormRequest
             $expectedOwner = match ($this->input('category')) {
                 'institution_logo', 'institution_stamp', 'institution_signature' => 'institution',
                 'student_photo' => 'student',
-                'template_background_front', 'template_background_back' => 'card_template',
+                'template_background_front', 'template_background_back' => 'institution',
                 default => null,
             };
 

@@ -53,9 +53,12 @@ class CardTemplateController extends Controller
             ])->values(),
             'backgroundAssets' => $backgroundAssets->map(fn (MediaAsset $mediaAsset): array => [
                 'id' => $mediaAsset->id,
+                'owner_type' => $mediaAsset->owner_type,
                 'owner_id' => $mediaAsset->owner_id,
+                'institution_id' => $this->institutionIdForModel($mediaAsset->owner),
                 'category' => $mediaAsset->category,
                 'label' => sprintf('#%d %s', $mediaAsset->id, $mediaAsset->original_name ?? $mediaAsset->object_key),
+                'stream_download_url' => route('media-assets.stream', $mediaAsset),
             ])->values(),
             'defaults' => [
                 'config_json_text' => DefaultCardTemplateData::configJson(),
@@ -175,9 +178,15 @@ class CardTemplateController extends Controller
             $asset = MediaAsset::query()->findOrFail($data[$field]);
 
             abort_unless(
-                $asset->owner_type === 'card_template'
-                && $asset->owner_id === $cardTemplate->id
-                && $asset->category === $category,
+                $asset->category === $category
+                && (
+                    ($asset->owner_type === 'card_template' && $asset->owner_id === $cardTemplate->id)
+                    || (
+                        $asset->owner_type === 'institution'
+                        && $cardTemplate->institution_id !== null
+                        && $asset->owner_id === $cardTemplate->institution_id
+                    )
+                ),
                 422,
             );
         }

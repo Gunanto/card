@@ -36,7 +36,7 @@ watch(
         if (category.startsWith('student')) {
             form.owner_type = 'student';
         } else if (category.startsWith('template')) {
-            form.owner_type = 'card_template';
+            form.owner_type = 'institution';
         } else {
             form.owner_type = 'institution';
         }

@@ -176,8 +176,12 @@ class MediaAssetController extends Controller
             'institution_stamp' => sprintf('institutions/%d/branding/stamp', $owner->getKey()),
             'institution_signature' => sprintf('institutions/%d/branding/signature', $owner->getKey()),
             'student_photo' => sprintf('students/%d/photos/original', $owner->getKey()),
-            'template_background_front' => sprintf('templates/%d/background/front', $owner->getKey()),
-            'template_background_back' => sprintf('templates/%d/background/back', $owner->getKey()),
+            'template_background_front' => $owner instanceof Institution
+                ? sprintf('institutions/%d/backgrounds/template/front', $owner->getKey())
+                : sprintf('templates/%d/background/front', $owner->getKey()),
+            'template_background_back' => $owner instanceof Institution
+                ? sprintf('institutions/%d/backgrounds/template/back', $owner->getKey())
+                : sprintf('templates/%d/background/back', $owner->getKey()),
             default => abort(422),
         };
     }

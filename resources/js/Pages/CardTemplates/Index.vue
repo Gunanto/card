@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import Modal from '@/Components/Modal.vue';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps({
@@ -28,6 +29,7 @@ const snapStepMm = ref(0.5);
 const historyStack = ref([]);
 const historyIndex = ref(-1);
 const applyingHistory = ref(false);
+const previewTemplate = ref(null);
 
 const sourceByLegacyKey = {
     name: 'student.name',
@@ -102,6 +104,7 @@ const blankForm = () => ({
 });
 
 const form = useForm(blankForm());
+const page = usePage();
 
 const toNumber = (value, fallback = 0) => {
     if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -319,9 +322,34 @@ const setForm = (values = {}) => {
     editorConfig.value.canvas.height_mm = toNumber(form.height_mm, 54);
 };
 
-const availableBackgrounds = computed(() =>
-    props.backgroundAssets.filter((asset) => Number(asset.owner_id) === Number(editingId.value)),
-);
+const availableBackgrounds = computed(() => {
+    const templateId = Number(editingId.value);
+    const institutionId = Number(form.institution_id);
+
+    return props.backgroundAssets.filter((asset) => {
+        if (asset.owner_type === 'institution') {
+            return Number(asset.institution_id) === institutionId;
+        }
+
+        // Backward compatibility: old backgrounds may still be owned by template.
+        if (asset.owner_type === 'card_template') {
+            return Number(asset.owner_id) === templateId;
+        }
+
+        return false;
+    });
+});
+const backgroundAssetById = computed(() => new Map(
+    props.backgroundAssets.map((asset) => [Number(asset.id), asset]),
+));
+const editorBackgroundUrl = computed(() => {
+    const assetId = Number(form.background_front_media_id);
+    if (!Number.isFinite(assetId) || assetId <= 0) return '';
+
+    return backgroundAssetById.value.get(assetId)?.stream_download_url ?? '';
+});
+const statusMessage = computed(() => page.props.flash?.status ?? '');
+const hasFormErrors = computed(() => Object.keys(form.errors).length > 0);
 
 const startCreate = () => {
     editingId.value = null;
@@ -358,6 +386,14 @@ const destroyTemplate = (id) => {
     form.delete(route('card-templates.destroy', id), { preserveScroll: true });
 };
 
+const viewTemplate = (template) => {
+    previewTemplate.value = template;
+};
+
+const closePreview = () => {
+    previewTemplate.value = null;
+};
+
 const canvasWidthPx = computed(() => toNumber(editorConfig.value.canvas.width_mm, 85.6) * mmScale);
 const canvasHeightPx = computed(() => toNumber(editorConfig.value.canvas.height_mm, 54) * mmScale);
 const selectedElement = computed(() => editorConfig.value.elements[selectedElementIndex.value] ?? null);
@@ -369,6 +405,7 @@ const sortedElements = computed(() => (
 
 const mmToPx = (mm) => toNumber(mm, 0) * mmScale;
 const pxToMm = (px) => px / mmScale;
+const previewScale = 6;
 
 const sourceLabel = (source) => {
     const candidate = [...textSourceOptions, ...imageSourceOptions]
@@ -386,6 +423,69 @@ const selectedElementPreviewLabel = (element) => {
     }
 
     return sourceLabel(element.source || element.key || '');
+};
+
+const previewConfigFor = (template) => {
+    const config = template?.config_json && typeof template.config_json === 'object'
+        ? template.config_json
+        : {};
+
+    const canvas = {
+        width_mm: toNumber(config?.canvas?.width_mm, template?.width_mm ?? 85.6),
+        height_mm: toNumber(config?.canvas?.height_mm, template?.height_mm ?? 54),
+    };
+    const elements = Array.isArray(config?.elements)
+        ? config.elements.filter((item) => item && typeof item === 'object').map((item, idx) => normalizeElement(item, idx))
+        : [];
+
+    return {
+        canvas,
+        elements: elements.sort((a, b) => toNumber(a.z, 0) - toNumber(b.z, 0)),
+    };
+};
+
+const previewCanvas = computed(() => previewConfigFor(previewTemplate.value).canvas);
+const previewElements = computed(() => previewConfigFor(previewTemplate.value).elements);
+const previewCanvasStyle = computed(() => ({
+    width: `${toNumber(previewCanvas.value.width_mm, 85.6) * previewScale}px`,
+    height: `${toNumber(previewCanvas.value.height_mm, 54) * previewScale}px`,
+}));
+
+const previewBackgroundUrl = (template, side = 'front') => {
+    const assetId = side === 'back'
+        ? template?.background_back_media_id
+        : template?.background_front_media_id;
+    if (!assetId) return '';
+
+    return backgroundAssetById.value.get(Number(assetId))?.stream_download_url ?? '';
+};
+
+const previewElementStyle = (element) => {
+    const base = {
+        position: 'absolute',
+        left: `${toNumber(element.x, 0) * previewScale}px`,
+        top: `${toNumber(element.y, 0) * previewScale}px`,
+        opacity: toNumber(element.opacity, 1),
+    };
+
+    if (element.type === 'text') {
+        return {
+            ...base,
+            width: element.w ? `${toNumber(element.w, 0) * previewScale}px` : 'max-content',
+            maxWidth: `${Math.max(1, toNumber(previewCanvas.value.width_mm, 85.6) - toNumber(element.x, 0)) * previewScale}px`,
+            color: element.color || '#111827',
+            fontSize: `${toNumber(element.font_size, 2.8) * previewScale}px`,
+            fontWeight: element.font_weight || '400',
+            lineHeight: 1.15,
+            whiteSpace: 'nowrap',
+        };
+    }
+
+    return {
+        ...base,
+        width: `${toNumber(element.w, 20) * previewScale}px`,
+        height: `${toNumber(element.h, 10) * previewScale}px`,
+    };
 };
 
 const ensureElementSourceDefaults = (element) => {
@@ -784,6 +884,15 @@ onBeforeUnmount(() => {
                 <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                     <h3 class="text-lg font-semibold text-gray-900">{{ editingId ? 'Edit Template' : 'Buat Template' }}</h3>
                     <p class="mt-1 text-sm text-gray-500">Background media baru bisa dipilih setelah template memiliki ID dan file diunggah.</p>
+                    <div v-if="statusMessage" class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                        {{ statusMessage }}
+                    </div>
+                    <div v-if="hasFormErrors" class="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                        <p class="font-medium">Template belum tersimpan. Periksa input berikut:</p>
+                        <ul class="mt-1 list-inside list-disc">
+                            <li v-for="(message, key) in form.errors" :key="key">{{ message }}</li>
+                        </ul>
+                    </div>
 
                     <form class="mt-6 space-y-4" @submit.prevent="submit">
                         <div class="grid gap-4 md:grid-cols-2">
@@ -803,20 +912,24 @@ onBeforeUnmount(() => {
                                         {{ cardType.name }}
                                     </option>
                                 </select>
+                                <p v-if="form.errors.card_type_id" class="mt-1 text-xs text-rose-600">{{ form.errors.card_type_id }}</p>
                             </div>
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-medium text-gray-700">Nama Template</label>
                             <input v-model="form.name" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
+                            <p v-if="form.errors.name" class="mt-1 text-xs text-rose-600">{{ form.errors.name }}</p>
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
                                 <label class="mb-1 block text-sm font-medium text-gray-700">Lebar (mm)</label>
                                 <input v-model="form.width_mm" class="w-full rounded-lg border-gray-300 text-sm" type="number" step="0.1" @change="applyCanvasSizeFromForm" />
+                                <p v-if="form.errors.width_mm" class="mt-1 text-xs text-rose-600">{{ form.errors.width_mm }}</p>
                             </div>
                             <div>
                                 <label class="mb-1 block text-sm font-medium text-gray-700">Tinggi (mm)</label>
                                 <input v-model="form.height_mm" class="w-full rounded-lg border-gray-300 text-sm" type="number" step="0.1" @change="applyCanvasSizeFromForm" />
+                                <p v-if="form.errors.height_mm" class="mt-1 text-xs text-rose-600">{{ form.errors.height_mm }}</p>
                             </div>
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
@@ -896,6 +1009,12 @@ onBeforeUnmount(() => {
                                         class="relative rounded-md border border-dashed border-gray-300 bg-gradient-to-br from-white to-gray-100"
                                         :style="{ width: `${canvasWidthPx}px`, height: `${canvasHeightPx}px` }"
                                     >
+                                        <img
+                                            v-if="editorBackgroundUrl"
+                                            :src="editorBackgroundUrl"
+                                            alt=""
+                                            class="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+                                        />
                                         <div
                                             v-for="{ element, index } in sortedElements"
                                             :key="`editor-element-${index}-${element.key}`"
@@ -1035,17 +1154,19 @@ onBeforeUnmount(() => {
                                 </button>
                             </div>
                             <textarea v-model="form.config_json_text" class="min-h-56 w-full rounded-lg border-gray-300 font-mono text-xs" />
+                            <p v-if="form.errors.config_json_text" class="mt-1 text-xs text-rose-600">{{ form.errors.config_json_text }}</p>
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-medium text-gray-700">Print Layout JSON</label>
                             <textarea v-model="form.print_layout_json_text" class="min-h-40 w-full rounded-lg border-gray-300 font-mono text-xs" />
+                            <p v-if="form.errors.print_layout_json_text" class="mt-1 text-xs text-rose-600">{{ form.errors.print_layout_json_text }}</p>
                         </div>
                         <label class="flex items-center gap-3 text-sm text-gray-700">
                             <input v-model="form.is_active" class="rounded border-gray-300" type="checkbox" />
                             Template aktif
                         </label>
                         <div class="flex gap-3">
-                            <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+                            <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" :disabled="form.processing">
                                 {{ editingId ? 'Simpan Perubahan' : 'Buat Template' }}
                             </button>
                             <button type="button" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700" @click="startCreate">
@@ -1079,11 +1200,43 @@ onBeforeUnmount(() => {
                                     <td class="px-3 py-3 text-gray-600">{{ template.is_active ? 'Active' : 'Inactive' }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex flex-wrap gap-2">
-                                            <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700" @click="editTemplate(template)">
-                                                Edit
+                                            <button
+                                                type="button"
+                                                class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-sky-300 px-2.5 text-xs font-medium text-sky-700 hover:bg-sky-50"
+                                                title="Lihat template"
+                                                @click="viewTemplate(template)"
+                                            >
+                                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M2.25 12s3.5-6.75 9.75-6.75S21.75 12 21.75 12 18.25 18.75 12 18.75 2.25 12 2.25 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                    <path d="M12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                                Lihat
                                             </button>
-                                            <button type="button" class="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-700" @click="destroyTemplate(template.id)">
-                                                Hapus
+                                            <button
+                                                type="button"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                                title="Edit template"
+                                                @click="editTemplate(template)"
+                                            >
+                                                <span class="sr-only">Edit</span>
+                                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M12 20h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                                                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50"
+                                                title="Hapus template"
+                                                @click="destroyTemplate(template.id)"
+                                            >
+                                                <span class="sr-only">Hapus</span>
+                                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M3 6h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                                                    <path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                    <path d="M19 6l-1 14a1.75 1.75 0 0 1-1.75 1.5h-8.5A1.75 1.75 0 0 1 6 20L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                    <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                                                </svg>
                                             </button>
                                         </div>
                                     </td>
@@ -1094,5 +1247,78 @@ onBeforeUnmount(() => {
                 </section>
             </div>
         </div>
+
+        <Modal :show="previewTemplate !== null" max-width="2xl" @close="closePreview">
+            <div v-if="previewTemplate" class="p-5">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">{{ previewTemplate.name }}</h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            {{ previewTemplate.card_type_name }} - {{ previewTemplate.width_mm }} x {{ previewTemplate.height_mm }} mm
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"
+                        title="Tutup preview"
+                        @click="closePreview"
+                    >
+                        <span class="sr-only">Tutup</span>
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mt-5 space-y-5 overflow-x-auto">
+                    <div>
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Depan</p>
+                        <div class="inline-block rounded-xl bg-gray-100 p-3">
+                            <div
+                                class="relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                                :style="previewCanvasStyle"
+                            >
+                                <img
+                                    v-if="previewBackgroundUrl(previewTemplate, 'front')"
+                                    :src="previewBackgroundUrl(previewTemplate, 'front')"
+                                    alt=""
+                                    class="absolute inset-0 h-full w-full object-cover"
+                                />
+                                <div
+                                    v-for="(element, index) in previewElements"
+                                    :key="`preview-front-${index}-${element.key}`"
+                                    :style="previewElementStyle(element)"
+                                >
+                                    <template v-if="element.type === 'text'">
+                                        {{ element.mode === 'static' ? element.text : selectedElementPreviewLabel(element) }}
+                                    </template>
+                                    <template v-else>
+                                        <div class="flex h-full w-full items-center justify-center rounded border border-dashed border-gray-400 bg-white/70 text-[10px] font-medium text-gray-500">
+                                            {{ selectedElementPreviewLabel(element) }}
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="previewBackgroundUrl(previewTemplate, 'back')">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Belakang</p>
+                        <div class="inline-block rounded-xl bg-gray-100 p-3">
+                            <div
+                                class="relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                                :style="previewCanvasStyle"
+                            >
+                                <img
+                                    :src="previewBackgroundUrl(previewTemplate, 'back')"
+                                    alt=""
+                                    class="absolute inset-0 h-full w-full object-cover"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>
