@@ -111,6 +111,11 @@ class CardTemplateConfigSchema
                 if ($mode === 'static' && trim((string) ($element['text'] ?? '')) === '') {
                     $errors[] = sprintf('Elemen text static #%d wajib punya `text`.', $index + 1);
                 }
+
+                $anchor = (string) ($element['text_anchor'] ?? 'start');
+                if (! in_array($anchor, ['start', 'middle', 'end'], true)) {
+                    $errors[] = sprintf('Elemen text #%d memiliki `text_anchor` tidak valid.', $index + 1);
+                }
             } else {
                 if (trim((string) ($element['source'] ?? '')) === '') {
                     $errors[] = sprintf('Elemen %s #%d wajib punya `source`.', $type, $index + 1);
@@ -154,9 +159,28 @@ class CardTemplateConfigSchema
             $element['font_size'] = self::number($rawElement['font_size'] ?? $rawElement['font_size_mm'] ?? null, 2.8);
             $element['font_weight'] = trim((string) ($rawElement['font_weight'] ?? '400')) ?: '400';
             $element['color'] = trim((string) ($rawElement['color'] ?? '#111827')) ?: '#111827';
+            $element['text_anchor'] = self::normalizeTextAnchor(
+                (string) ($rawElement['text_anchor'] ?? $rawElement['text_align'] ?? 'start')
+            );
         }
 
         return $element;
+    }
+
+    protected static function normalizeTextAnchor(string $value): string
+    {
+        $raw = strtolower(trim($value));
+        $map = [
+            'left' => 'start',
+            'center' => 'middle',
+            'right' => 'end',
+        ];
+
+        if (isset($map[$raw])) {
+            return $map[$raw];
+        }
+
+        return in_array($raw, ['start', 'middle', 'end'], true) ? $raw : 'start';
     }
 
     protected static function normalizeSource(array $rawElement): string

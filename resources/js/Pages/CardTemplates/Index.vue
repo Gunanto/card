@@ -217,6 +217,7 @@ const normalizeElement = (raw, index) => {
             font_size: toNumber(raw?.font_size ?? raw?.font_size_mm, 2.8),
             font_weight: raw?.font_weight ? String(raw.font_weight) : '400',
             color: raw?.color ? String(raw.color) : '#111827',
+            text_anchor: normalizeTextAnchor(raw?.text_anchor ?? raw?.text_align ?? 'start'),
         };
     }
 
@@ -473,6 +474,33 @@ const sortedElements = computed(() => (
 const mmToPx = (mm) => toNumber(mm, 0) * mmScale;
 const pxToMm = (px) => px / mmScale;
 const previewScale = 6;
+const textAnchorOptions = [
+    { value: 'start', label: 'left' },
+    { value: 'middle', label: 'center' },
+    { value: 'end', label: 'right' },
+];
+
+const normalizeTextAnchor = (value) => {
+    const raw = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (raw === 'left') return 'start';
+    if (raw === 'center') return 'middle';
+    if (raw === 'right') return 'end';
+    return ['start', 'middle', 'end'].includes(raw) ? raw : 'start';
+};
+
+const textAnchorTransform = (value) => {
+    const anchor = normalizeTextAnchor(value);
+    if (anchor === 'middle') return 'translateX(-50%)';
+    if (anchor === 'end') return 'translateX(-100%)';
+    return 'none';
+};
+
+const textAlignFromAnchor = (value) => {
+    const anchor = normalizeTextAnchor(value);
+    if (anchor === 'middle') return 'center';
+    if (anchor === 'end') return 'right';
+    return 'left';
+};
 
 const customSizeOption = computed(() => {
     const preset = findSizePresetByMm(form.width_mm, form.height_mm);
@@ -576,6 +604,8 @@ const previewElementStyle = (element) => {
             fontWeight: element.font_weight || '400',
             lineHeight: 1.15,
             whiteSpace: 'nowrap',
+            transform: textAnchorTransform(element.text_anchor),
+            textAlign: textAlignFromAnchor(element.text_anchor),
         };
     }
 
@@ -598,6 +628,7 @@ const ensureElementSourceDefaults = (element) => {
         if (!['dynamic', 'static'].includes(element.mode)) {
             element.mode = 'dynamic';
         }
+        element.text_anchor = normalizeTextAnchor(element.text_anchor);
         if (element.mode === 'dynamic' && (!element.source || !String(element.source).trim())) {
             element.source = 'student.name';
         }
@@ -861,6 +892,8 @@ const editorTextStyle = (element, index) => ({
     fontWeight: element.font_weight || '400',
     lineHeight: 1,
     whiteSpace: 'nowrap',
+    transform: textAnchorTransform(element.text_anchor),
+    textAlign: textAlignFromAnchor(element.text_anchor),
     backgroundColor: selectedElementIndex.value === index ? 'rgba(14,165,233,0.08)' : 'transparent',
     outline: selectedElementIndex.value === index ? '1px dashed #0ea5e9' : 'none',
     outlineOffset: '1px',
@@ -971,6 +1004,7 @@ const onSelectedElementInput = () => {
     }
     if (selectedElement.value.type === 'text') {
         selectedElement.value.color = normalizeColorHex(selectedElement.value.color, '#000000');
+        selectedElement.value.text_anchor = normalizeTextAnchor(selectedElement.value.text_anchor);
     }
     normalizeElementBounds(selectedElement.value);
     syncFormConfigText();
@@ -1229,6 +1263,14 @@ onBeforeUnmount(() => {
                                     <label v-if="selectedElement.type === 'text'" class="block">
                                         <span class="mb-1 block text-gray-600">Weight</span>
                                         <input v-model="selectedElement.font_weight" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label v-if="selectedElement.type === 'text'" class="block">
+                                        <span class="mb-1 block text-gray-600">Posisi Text</span>
+                                        <select v-model="selectedElement.text_anchor" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                            <option v-for="option in textAnchorOptions" :key="option.value" :value="option.value">
+                                                {{ option.label }}
+                                            </option>
+                                        </select>
                                     </label>
                                     <label v-if="selectedElement.type === 'text'" class="block sm:col-span-2 lg:col-span-2">
                                         <span class="mb-1 block text-gray-600">Color</span>
