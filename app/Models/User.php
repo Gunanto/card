@@ -20,6 +20,7 @@ use Illuminate\Notifications\Notifiable;
     'password',
     'role',
     'is_active',
+    'card_generation_limit',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -32,6 +33,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_active' => 'boolean',
+            'card_generation_limit' => 'integer',
             'password' => 'hashed',
         ];
     }

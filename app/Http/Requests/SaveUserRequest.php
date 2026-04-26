@@ -8,6 +8,14 @@ use Illuminate\Validation\Rule;
 
 class SaveUserRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'institution_id' => $this->input('institution_id') === '' ? null : $this->input('institution_id'),
+            'card_generation_limit' => $this->input('card_generation_limit') === '' ? null : $this->input('card_generation_limit'),
+        ]);
+    }
+
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -26,7 +34,7 @@ class SaveUserRequest extends FormRequest
             'role' => ['required', Rule::in(['admin', 'guru'])],
             'is_active' => ['required', 'boolean'],
             'institution_id' => ['nullable', 'integer', 'exists:institutions,id'],
+            'card_generation_limit' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }
-

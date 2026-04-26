@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,6 +44,8 @@ class GenerateBatchController extends Controller
             ]),
             $user,
         )->latest()->limit(20)->get();
+
+        $quota = $this->generationQuotaForUser($user);
 
         return Inertia::render('GenerateBatches/Index', [
             'templates' => $templates->map(fn (CardTemplate $template): array => [
@@ -85,6 +88,7 @@ class GenerateBatchController extends Controller
                 ])->values(),
             ])->values(),
             'defaultOptionsJsonText' => "{}",
+            'generationQuota' => $quota,
         ]);
     }
 
@@ -96,6 +100,21 @@ class GenerateBatchController extends Controller
             Student::query()->whereIn('id', $request->input('student_ids', [])),
             $user,
         )->get();
+
+        $requestedTotal = $students->count();
+        $quota = $this->generationQuotaForUser($user);
+        if (($quota['is_limited'] ?? false) === true) {
+            $remaining = (int) ($quota['remaining'] ?? 0);
+            if ($requestedTotal > $remaining) {
+                throw ValidationException::withMessages([
+                    'student_ids' => sprintf(
+                        'Kuota generate kartu tidak cukup. Sisa kuota Anda %d kartu, tetapi permintaan saat ini %d kartu.',
+                        $remaining,
+                        $requestedTotal,
+                    ),
+                ]);
+            }
+        }
 
         abort_unless($students->count() === count($request->input('student_ids', [])), 422);
 
@@ -210,6 +229,39 @@ class GenerateBatchController extends Controller
         );
 
         return back()->with('status', 'Batch deleted.');
+    }
+
+    protected function generationQuotaForUser(?User $user): array
+    {
+        if (! $user || ! $user->isGuru()) {
+            return [
+                'is_limited' => false,
+                'limit' => null,
+                'used' => null,
+                'remaining' => null,
+            ];
+        }
+
+        $limit = $user->card_generation_limit;
+        if ($limit === null) {
+            return [
+                'is_limited' => false,
+                'limit' => null,
+                'used' => null,
+                'remaining' => null,
+            ];
+        }
+
+        $used = (int) GenerateBatch::query()
+            ->where('requested_by', $user->id)
+            ->sum('total_cards');
+
+        return [
+            'is_limited' => true,
+            'limit' => (int) $limit,
+            'used' => $used,
+            'remaining' => max(0, (int) $limit - $used),
+        ];
     }
 
     protected function resolveOrGenerateBatchPdf(GenerateBatch $batch, User $user, BatchPdfService $batchPdfService): MediaAsset

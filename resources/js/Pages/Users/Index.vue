@@ -18,6 +18,7 @@ const blankForm = () => ({
     role: 'guru',
     is_active: true,
     institution_id: '',
+    card_generation_limit: '',
 });
 
 const form = useForm(blankForm());
@@ -38,6 +39,7 @@ const roleOptions = [
 ];
 
 const showInstitutionSelect = computed(() => form.role === 'guru');
+const showCardLimitInput = computed(() => form.role === 'guru');
 
 const startCreate = () => {
     editingId.value = null;
@@ -57,6 +59,7 @@ const editUser = (user) => {
 const submit = () => {
     if (form.role === 'admin') {
         form.institution_id = '';
+        form.card_generation_limit = '';
     }
 
     if (editingId.value) {
@@ -142,6 +145,18 @@ const destroyUser = (user) => {
                                 </select>
                             </div>
                         </div>
+                        <div v-if="showCardLimitInput">
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Batas Card Guru</label>
+                            <input
+                                v-model="form.card_generation_limit"
+                                class="theme-input w-full rounded-lg text-sm"
+                                type="number"
+                                min="1"
+                                placeholder="Kosong = tanpa batas"
+                            />
+                            <p class="mt-1 text-xs text-[var(--app-text-muted)]">Batas total kartu yang boleh digenerate oleh akun guru ini.</p>
+                            <p v-if="form.errors.card_generation_limit" class="mt-1 text-xs text-rose-600">{{ form.errors.card_generation_limit }}</p>
+                        </div>
                         <label class="flex items-center gap-3 text-sm text-[var(--app-text-muted)]">
                             <input v-model="form.is_active" class="rounded border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-primary)]" type="checkbox" />
                             Active
@@ -171,6 +186,7 @@ const destroyUser = (user) => {
                                     <th class="px-3 py-2 font-medium">Email</th>
                                     <th class="px-3 py-2 font-medium">Role</th>
                                     <th class="px-3 py-2 font-medium">Institution</th>
+                                    <th class="px-3 py-2 font-medium">Kuota Card</th>
                                     <th class="px-3 py-2 font-medium">Status</th>
                                     <th class="px-3 py-2 font-medium">Aksi</th>
                                 </tr>
@@ -181,6 +197,7 @@ const destroyUser = (user) => {
                                     <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.email }}</td>
                                     <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.role }}</td>
                                     <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.institution_name || '-' }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.role === 'guru' ? (user.card_generation_limit ?? 'Tanpa batas') : '-' }}</td>
                                     <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.is_active ? 'active' : 'inactive' }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex flex-wrap gap-2">

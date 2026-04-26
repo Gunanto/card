@@ -8,6 +8,15 @@ const props = defineProps({
     students: { type: Array, required: true },
     batches: { type: Array, required: true },
     defaultOptionsJsonText: { type: String, required: true },
+    generationQuota: {
+        type: Object,
+        default: () => ({
+            is_limited: false,
+            limit: null,
+            used: null,
+            remaining: null,
+        }),
+    },
 });
 
 const form = useForm({
@@ -273,6 +282,10 @@ onBeforeUnmount(() => {
             <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[0.95fr,1.45fr] lg:px-8">
                 <section class="theme-surface rounded-xl border p-6 shadow-sm">
                     <h3 class="text-lg font-semibold text-[var(--app-text)]">Buat Batch Baru</h3>
+                    <div v-if="generationQuota.is_limited" class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        Kuota Anda: {{ generationQuota.used }} / {{ generationQuota.limit }} kartu
+                        (sisa {{ generationQuota.remaining }}).
+                    </div>
                     <form class="mt-6 space-y-4" @submit.prevent="submit">
                         <div>
                             <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Template</label>
@@ -309,6 +322,7 @@ onBeforeUnmount(() => {
                                     </span>
                                 </label>
                             </div>
+                            <p v-if="form.errors.student_ids" class="mt-2 text-xs text-rose-600">{{ form.errors.student_ids }}</p>
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Options JSON</label>

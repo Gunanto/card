@@ -31,6 +31,7 @@ class UserManagementController extends Controller
                 'is_active' => (bool) $user->is_active,
                 'institution_id' => $user->institution_id,
                 'institution_name' => $user->institution?->name,
+                'card_generation_limit' => $user->card_generation_limit,
             ])->values(),
             'institutions' => $institutions->map(fn (Institution $institution): array => [
                 'id' => $institution->id,
@@ -46,6 +47,7 @@ class UserManagementController extends Controller
 
         $data = $request->validated();
         $data['institution_id'] = $data['role'] === 'guru' ? ($data['institution_id'] ?? null) : null;
+        $data['card_generation_limit'] = $data['role'] === 'guru' ? ($data['card_generation_limit'] ?? null) : null;
         $data['email_verified_at'] = now();
 
         $user = User::query()->create($data);
@@ -65,6 +67,7 @@ class UserManagementController extends Controller
 
         $data = $request->validated();
         $data['institution_id'] = $data['role'] === 'guru' ? ($data['institution_id'] ?? null) : null;
+        $data['card_generation_limit'] = $data['role'] === 'guru' ? ($data['card_generation_limit'] ?? null) : null;
 
         if (($data['password'] ?? null) === null || $data['password'] === '') {
             unset($data['password']);
