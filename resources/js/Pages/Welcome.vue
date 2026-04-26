@@ -457,8 +457,8 @@ onMounted(() => {
 
 .theme-dark.gradient-bg {
     background:
-        radial-gradient(circle at 55% -20%, rgba(30, 64, 175, 0.45) 0%, rgba(15, 23, 42, 0) 58%),
-        radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.2) 0%, transparent 45%),
+        radial-gradient(circle at 55% -24%, rgba(59, 130, 246, 0.24) 0%, rgba(15, 23, 42, 0) 60%),
+        radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.11) 0%, transparent 46%),
         #0f172a;
 }
 
@@ -533,7 +533,7 @@ onMounted(() => {
 }
 
 .theme-dark .animate-blob {
-    background-color: rgba(37, 99, 235, 0.3) !important;
+    background-color: rgba(56, 189, 248, 0.18) !important;
 }
 
 .card-hover {
