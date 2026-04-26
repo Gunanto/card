@@ -11,6 +11,13 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    landingStats: {
+        type: Object,
+        default: () => ({
+            pdf_total_label: '0',
+            uptime_label: 'N/A',
+        }),
+    },
 });
 
 const landingThemeStorageKey = 'landing_theme';
@@ -414,11 +421,11 @@ onMounted(() => {
                 </div>
                 <div class="flex gap-12">
                     <div class="text-center">
-                        <p class="text-2xl font-bold text-slate-900">50k+</p>
+                        <p class="text-2xl font-bold text-slate-900">{{ landingStats.pdf_total_label }}</p>
                         <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">PDF Dibuat</p>
                     </div>
                     <div class="text-center">
-                        <p class="text-2xl font-bold text-slate-900">99.9%</p>
+                        <p class="text-2xl font-bold text-slate-900">{{ landingStats.uptime_label }}</p>
                         <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Uptime Sistem</p>
                     </div>
                     <div class="text-center">

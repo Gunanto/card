@@ -12,9 +12,11 @@ use App\Http\Controllers\UserManagementController;
 use App\Models\CardTemplate;
 use App\Models\Classroom;
 use App\Models\GenerateBatch;
+use App\Models\GeneratedCard;
 use App\Models\Institution;
 use App\Models\Student;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,9 +26,56 @@ Route::get('/', function (): RedirectResponse|Response {
         return redirect()->route('dashboard');
     }
 
+    $formatCompactNumber = static function (int $value): string {
+        if ($value >= 1_000_000) {
+            return rtrim(rtrim(number_format($value / 1_000_000, 1, '.', ''), '0'), '.').'M+';
+        }
+
+        if ($value >= 1_000) {
+            return rtrim(rtrim(number_format($value / 1_000, 1, '.', ''), '0'), '.').'k+';
+        }
+
+        return number_format($value, 0, ',', '.');
+    };
+
+    $landingStats = Cache::remember('landing:stats:v1', now()->addMinutes(10), static function (): array {
+        $pdfTotal = GeneratedCard::query()
+            ->where('status', 'done')
+            ->whereNotNull('pdf_media_id')
+            ->count();
+
+        $uptimeSeconds = null;
+        if (PHP_OS_FAMILY === 'Linux' && is_readable('/proc/uptime')) {
+            $rawUptime = @file_get_contents('/proc/uptime');
+            if (is_string($rawUptime)) {
+                $parts = preg_split('/\s+/', trim($rawUptime));
+                $candidate = $parts[0] ?? null;
+                if (is_numeric($candidate)) {
+                    $uptimeSeconds = (int) floor((float) $candidate);
+                }
+            }
+        }
+
+        $uptimePercent = null;
+        if ($uptimeSeconds !== null) {
+            $uptimePercent = min(100, round(($uptimeSeconds / (30 * 24 * 60 * 60)) * 100, 1));
+        }
+
+        return [
+            'pdf_total' => $pdfTotal,
+            'uptime_percent' => $uptimePercent,
+        ];
+    });
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => false,
+        'landingStats' => [
+            'pdf_total_label' => $formatCompactNumber((int) ($landingStats['pdf_total'] ?? 0)),
+            'uptime_label' => isset($landingStats['uptime_percent'])
+                ? rtrim(rtrim(number_format((float) $landingStats['uptime_percent'], 1, '.', ''), '0'), '.').'%'
+                : 'N/A',
+        ],
     ]);
 });
 
