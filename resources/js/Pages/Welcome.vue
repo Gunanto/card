@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
+import { computed, onMounted, ref } from 'vue';
 
 defineProps({
     canLogin: {
@@ -11,12 +12,42 @@ defineProps({
         default: false,
     },
 });
+
+const landingThemeStorageKey = 'landing_theme';
+const isDark = ref(false);
+const themeIconLabel = computed(() => (isDark.value ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'));
+
+const applyTheme = (mode) => {
+    isDark.value = mode === 'dark';
+    try {
+        localStorage.setItem(landingThemeStorageKey, mode);
+    } catch {
+        // noop for private browsing/storage-disabled
+    }
+};
+
+const toggleTheme = () => {
+    applyTheme(isDark.value ? 'light' : 'dark');
+};
+
+onMounted(() => {
+    try {
+        const stored = localStorage.getItem(landingThemeStorageKey);
+        if (stored === 'dark' || stored === 'light') {
+            isDark.value = stored === 'dark';
+            return;
+        }
+    } catch {
+        // noop
+    }
+    isDark.value = false;
+});
 </script>
 
 <template>
     <Head title="CardGen - Generate Kartu, Sertifikat, dan Piagam Otomatis" />
 
-    <div class="gradient-bg min-h-screen text-slate-800">
+    <div class="landing-root gradient-bg min-h-screen text-slate-800" :class="isDark ? 'theme-dark' : 'theme-light'">
         <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-8">
             <div class="flex items-center gap-2">
                 <svg
@@ -39,28 +70,61 @@ defineProps({
                 <Link :href="route('landing.pricing')" class="transition hover:text-[#FF2D20]">Harga</Link>
             </div>
 
-            <div v-if="canLogin">
-                <Link
-                    v-if="$page.props.auth.user"
-                    :href="route('dashboard')"
-                    class="px-4 py-2 text-sm font-semibold hover:text-slate-900"
+            <div class="flex items-center gap-2">
+                <button
+                    type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white"
+                    :aria-label="themeIconLabel"
+                    @click="toggleTheme"
                 >
-                    Dashboard
-                </Link>
-                <template v-else>
+                    <svg
+                        v-if="isDark"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        class="h-5 w-5"
+                    >
+                        <circle cx="12" cy="12" r="4.5" />
+                        <path d="M12 2.75v2.5M12 18.75v2.5M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2.75 12h2.5M18.75 12h2.5M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77" />
+                    </svg>
+                    <svg
+                        v-else
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        class="h-5 w-5"
+                    >
+                        <path d="M20.354 14.604A9 9 0 1 1 9.396 3.646a7 7 0 1 0 10.958 10.958Z" />
+                    </svg>
+                </button>
+
+                <div v-if="canLogin" class="flex items-center">
                     <Link
-                        :href="route('login')"
+                        v-if="$page.props.auth.user"
+                        :href="route('dashboard')"
                         class="px-4 py-2 text-sm font-semibold hover:text-slate-900"
                     >
-                        Masuk
+                        Dashboard
                     </Link>
-                    <Link
-                        :href="route('landing.signup')"
-                        class="ml-2 rounded-lg bg-[#FF2D20] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e02a1d]"
-                    >
-                        Mulai Gratis
-                    </Link>
-                </template>
+                    <template v-else>
+                        <Link
+                            :href="route('login')"
+                            class="px-4 py-2 text-sm font-semibold hover:text-slate-900"
+                        >
+                            Masuk
+                        </Link>
+                        <Link
+                            :href="route('landing.signup')"
+                            class="ml-2 rounded-lg bg-[#FF2D20] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e02a1d]"
+                        >
+                            Mulai Gratis
+                        </Link>
+                    </template>
+                </div>
             </div>
         </nav>
 
@@ -377,6 +441,72 @@ defineProps({
 
 .gradient-bg {
     background: radial-gradient(circle at 0% 0%, rgba(255, 45, 32, 0.05) 0%, transparent 50%);
+}
+
+.theme-dark {
+    background-color: #0f172a;
+    color: #e2e8f0;
+}
+
+.theme-dark.gradient-bg {
+    background:
+        radial-gradient(circle at 55% -20%, rgba(30, 64, 175, 0.45) 0%, rgba(15, 23, 42, 0) 58%),
+        radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.2) 0%, transparent 45%),
+        #0f172a;
+}
+
+.theme-dark .bg-white {
+    background-color: rgba(15, 23, 42, 0.72) !important;
+}
+
+.theme-dark .bg-white\/90 {
+    background-color: rgba(15, 23, 42, 0.82) !important;
+}
+
+.theme-dark .bg-slate-50 {
+    background-color: rgba(30, 41, 59, 0.65) !important;
+}
+
+.theme-dark .bg-slate-100 {
+    background-color: rgba(51, 65, 85, 0.55) !important;
+}
+
+.theme-dark .border-slate-100,
+.theme-dark .border-slate-200 {
+    border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+.theme-dark .text-slate-900 {
+    color: #f8fafc !important;
+}
+
+.theme-dark .text-slate-800 {
+    color: #e2e8f0 !important;
+}
+
+.theme-dark .text-slate-700 {
+    color: #cbd5e1 !important;
+}
+
+.theme-dark .text-slate-600 {
+    color: #94a3b8 !important;
+}
+
+.theme-dark .text-slate-500,
+.theme-dark .text-slate-400 {
+    color: #94a3b8 !important;
+}
+
+.theme-dark .shadow-red-200 {
+    --tw-shadow-color: rgba(255, 45, 32, 0.3) !important;
+}
+
+.theme-dark footer {
+    background-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.theme-dark .animate-blob {
+    background-color: rgba(37, 99, 235, 0.3) !important;
 }
 
 .card-hover {
