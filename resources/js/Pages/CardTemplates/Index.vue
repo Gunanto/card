@@ -1154,178 +1154,155 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
 
-                            <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr),320px]">
-                                <div class="overflow-auto rounded-lg border border-gray-200 bg-white p-4">
-                                    <div
-                                        class="relative rounded-md border border-dashed border-gray-300 bg-gradient-to-br from-white to-gray-100"
-                                        :style="{ width: `${canvasWidthPx}px`, height: `${canvasHeightPx}px` }"
-                                    >
-                                        <img
-                                            v-if="editorBackgroundUrl"
-                                            :src="editorBackgroundUrl"
-                                            alt=""
-                                            class="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-                                        />
-                                        <div
-                                            v-for="{ element, index } in sortedElements"
-                                            :key="`editor-element-${index}-${element.key}`"
-                                            :style="elementStyle(element)"
-                                            class="group cursor-move select-none"
-                                            @mousedown="startElementDrag($event, index)"
-                                        >
-                                            <template v-if="element.type === 'text'">
-                                                <div :style="editorTextStyle(element, index)">
-                                                    {{ editorTextValue(element) }}
-                                                </div>
-                                            </template>
-                                            <template v-else>
-                                                <div
-                                                    class="rounded border px-1 py-0.5 text-[10px] leading-tight"
-                                                    :class="selectedElementIndex === index ? 'border-sky-500 bg-sky-50 text-sky-900' : 'border-gray-300 bg-white text-gray-600'"
-                                                >
-                                                    <template v-if="element.type === 'photo'">
-                                                        P: {{ selectedElementPreviewLabel(element) }}
-                                                    </template>
-                                                    <template v-else>
-                                                        I: {{ selectedElementPreviewLabel(element) }}
-                                                    </template>
-                                                </div>
-                                            </template>
-                                            <div
-                                                v-if="element.type !== 'text'"
-                                                class="absolute bottom-0 right-0 h-3 w-3 cursor-se-resize rounded-sm border border-sky-500 bg-sky-400"
-                                                @mousedown="startElementResize($event, index)"
-                                            />
-                                        </div>
-                                    </div>
-                                    <p class="mt-2 text-[11px] text-gray-500">
-                                        Drag elemen untuk memindahkan posisi. Untuk elemen image/photo, tarik handle kanan-bawah untuk resize.
-                                    </p>
-                                    <p class="mt-1 text-[11px] text-gray-500">
-                                        Shortcut: Ctrl/Cmd+Z untuk undo, Ctrl/Cmd+Shift+Z atau Ctrl/Cmd+Y untuk redo.
-                                    </p>
-                                </div>
-
-                                <div class="rounded-lg border border-gray-200 bg-white p-3">
-                                    <h5 class="text-xs font-semibold uppercase tracking-wide text-gray-700">Properti Elemen</h5>
-                                    <div v-if="selectedElement" class="mt-3 space-y-2 text-xs">
+                            <div class="mt-4 rounded-lg border border-gray-200 bg-white p-3">
+                                <h5 class="text-xs font-semibold uppercase tracking-wide text-gray-700">Properti Elemen</h5>
+                                <div v-if="selectedElement" class="mt-3 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+                                    <label class="block">
+                                        <span class="mb-1 block text-gray-600">Type</span>
+                                        <select v-model="selectedElement.type" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                            <option value="text">text</option>
+                                            <option value="photo">photo</option>
+                                            <option value="image">image</option>
+                                        </select>
+                                    </label>
+                                    <template v-if="selectedElement.type === 'text'">
                                         <label class="block">
-                                            <span class="mb-1 block text-gray-600">Type</span>
-                                            <select v-model="selectedElement.type" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
-                                                <option value="text">text</option>
-                                                <option value="photo">photo</option>
-                                                <option value="image">image</option>
+                                            <span class="mb-1 block text-gray-600">Mode</span>
+                                            <select v-model="selectedElement.mode" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                                <option value="dynamic">dynamic</option>
+                                                <option value="static">static</option>
                                             </select>
                                         </label>
-                                        <template v-if="selectedElement.type === 'text'">
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">Mode</span>
-                                                <select v-model="selectedElement.mode" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
-                                                    <option value="dynamic">dynamic</option>
-                                                    <option value="static">static</option>
-                                                </select>
-                                            </label>
-                                            <label v-if="selectedElement.mode === 'dynamic'" class="block">
-                                                <span class="mb-1 block text-gray-600">Source</span>
-                                                <select v-model="selectedElement.source" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
-                                                    <option v-for="option in textSourceOptions" :key="option.value" :value="option.value">
-                                                        {{ option.label }}
-                                                    </option>
-                                                </select>
-                                            </label>
-                                            <label v-else class="block">
-                                                <span class="mb-1 block text-gray-600">Static Text</span>
-                                                <input v-model="selectedElement.text" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                        </template>
-                                        <label v-else class="block">
+                                        <label v-if="selectedElement.mode === 'dynamic'" class="block sm:col-span-2 lg:col-span-2">
                                             <span class="mb-1 block text-gray-600">Source</span>
                                             <select v-model="selectedElement.source" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
-                                                <option v-for="option in imageSourceOptions" :key="option.value" :value="option.value">
+                                                <option v-for="option in textSourceOptions" :key="option.value" :value="option.value">
                                                     {{ option.label }}
                                                 </option>
                                             </select>
                                         </label>
-                                        <label class="block">
-                                            <span class="mb-1 block text-gray-600">Legacy Key</span>
-                                            <input v-model="selectedElement.key" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <label v-else class="block sm:col-span-2 lg:col-span-2">
+                                            <span class="mb-1 block text-gray-600">Static Text</span>
+                                            <input v-model="selectedElement.text" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                         </label>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">X (mm)</span>
-                                                <input v-model.number="selectedElement.x" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">Y (mm)</span>
-                                                <input v-model.number="selectedElement.y" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                        </div>
-                                        <div v-if="selectedElement.type !== 'text'" class="grid grid-cols-2 gap-2">
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">W (mm)</span>
-                                                <input v-model.number="selectedElement.w" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">H (mm)</span>
-                                                <input v-model.number="selectedElement.h" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">Z</span>
-                                                <input v-model.number="selectedElement.z" class="w-full rounded border-gray-300 text-xs" type="number" step="1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">Opacity</span>
-                                                <input v-model.number="selectedElement.opacity" class="w-full rounded border-gray-300 text-xs" type="number" min="0" max="1" step="0.05" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                        </div>
-                                        <div v-if="selectedElement.type === 'text'" class="grid grid-cols-2 gap-2">
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">Font size</span>
-                                                <input v-model.number="selectedElement.font_size" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                            <label class="block">
-                                                <span class="mb-1 block text-gray-600">Weight</span>
-                                                <input v-model="selectedElement.font_weight" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
-                                            </label>
-                                        </div>
-                                        <label v-if="selectedElement.type === 'text'" class="block">
-                                            <span class="mb-1 block text-gray-600">Color</span>
-                                            <select v-model="selectedElement.color" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
-                                                <option
-                                                    v-if="selectedElement.color && !hasTextColorOption(selectedElement.color)"
-                                                    :value="selectedElement.color"
-                                                >
-                                                    Current → {{ selectedElement.color }}
-                                                </option>
-                                                <option v-for="option in textColorOptions" :key="option.value" :value="option.value">
-                                                    {{ option.label }} → {{ option.value }}
-                                                </option>
-                                            </select>
-                                        </label>
-                                    </div>
-                                    <p v-else class="mt-3 text-xs text-gray-500">
-                                        Pilih elemen di canvas untuk edit properti.
-                                    </p>
+                                    </template>
+                                    <label v-else class="block sm:col-span-2 lg:col-span-2">
+                                        <span class="mb-1 block text-gray-600">Source</span>
+                                        <select v-model="selectedElement.source" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                            <option v-for="option in imageSourceOptions" :key="option.value" :value="option.value">
+                                                {{ option.label }}
+                                            </option>
+                                        </select>
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-gray-600">Legacy Key</span>
+                                        <input v-model="selectedElement.key" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-gray-600">X (mm)</span>
+                                        <input v-model.number="selectedElement.x" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-gray-600">Y (mm)</span>
+                                        <input v-model.number="selectedElement.y" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label v-if="selectedElement.type !== 'text'" class="block">
+                                        <span class="mb-1 block text-gray-600">W (mm)</span>
+                                        <input v-model.number="selectedElement.w" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label v-if="selectedElement.type !== 'text'" class="block">
+                                        <span class="mb-1 block text-gray-600">H (mm)</span>
+                                        <input v-model.number="selectedElement.h" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-gray-600">Z</span>
+                                        <input v-model.number="selectedElement.z" class="w-full rounded border-gray-300 text-xs" type="number" step="1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-gray-600">Opacity</span>
+                                        <input v-model.number="selectedElement.opacity" class="w-full rounded border-gray-300 text-xs" type="number" min="0" max="1" step="0.05" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label v-if="selectedElement.type === 'text'" class="block">
+                                        <span class="mb-1 block text-gray-600">Font size</span>
+                                        <input v-model.number="selectedElement.font_size" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label v-if="selectedElement.type === 'text'" class="block">
+                                        <span class="mb-1 block text-gray-600">Weight</span>
+                                        <input v-model="selectedElement.font_weight" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                    </label>
+                                    <label v-if="selectedElement.type === 'text'" class="block sm:col-span-2 lg:col-span-2">
+                                        <span class="mb-1 block text-gray-600">Color</span>
+                                        <select v-model="selectedElement.color" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                            <option
+                                                v-if="selectedElement.color && !hasTextColorOption(selectedElement.color)"
+                                                :value="selectedElement.color"
+                                            >
+                                                Current → {{ selectedElement.color }}
+                                            </option>
+                                            <option v-for="option in textColorOptions" :key="option.value" :value="option.value">
+                                                {{ option.label }} → {{ option.value }}
+                                            </option>
+                                        </select>
+                                    </label>
                                 </div>
+                                <p v-else class="mt-3 text-xs text-gray-500">
+                                    Pilih elemen di canvas untuk edit properti.
+                                </p>
+                            </div>
+
+                            <div class="mt-4 overflow-auto rounded-lg border border-gray-200 bg-white p-4">
+                                <div
+                                    class="relative rounded-md border border-dashed border-gray-300 bg-gradient-to-br from-white to-gray-100"
+                                    :style="{ width: `${canvasWidthPx}px`, height: `${canvasHeightPx}px` }"
+                                >
+                                    <img
+                                        v-if="editorBackgroundUrl"
+                                        :src="editorBackgroundUrl"
+                                        alt=""
+                                        class="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+                                    />
+                                    <div
+                                        v-for="{ element, index } in sortedElements"
+                                        :key="`editor-element-${index}-${element.key}`"
+                                        :style="elementStyle(element)"
+                                        class="group cursor-move select-none"
+                                        @mousedown="startElementDrag($event, index)"
+                                    >
+                                        <template v-if="element.type === 'text'">
+                                            <div :style="editorTextStyle(element, index)">
+                                                {{ editorTextValue(element) }}
+                                            </div>
+                                        </template>
+                                        <template v-else>
+                                            <div
+                                                class="rounded border px-1 py-0.5 text-[10px] leading-tight"
+                                                :class="selectedElementIndex === index ? 'border-sky-500 bg-sky-50 text-sky-900' : 'border-gray-300 bg-white text-gray-600'"
+                                            >
+                                                <template v-if="element.type === 'photo'">
+                                                    P: {{ selectedElementPreviewLabel(element) }}
+                                                </template>
+                                                <template v-else>
+                                                    I: {{ selectedElementPreviewLabel(element) }}
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <div
+                                            v-if="element.type !== 'text'"
+                                            class="absolute bottom-0 right-0 h-3 w-3 cursor-se-resize rounded-sm border border-sky-500 bg-sky-400"
+                                            @mousedown="startElementResize($event, index)"
+                                        />
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-[11px] text-gray-500">
+                                    Drag elemen untuk memindahkan posisi. Untuk elemen image/photo, tarik handle kanan-bawah untuk resize.
+                                </p>
+                                <p class="mt-1 text-[11px] text-gray-500">
+                                    Shortcut: Ctrl/Cmd+Z untuk undo, Ctrl/Cmd+Shift+Z atau Ctrl/Cmd+Y untuk redo.
+                                </p>
                             </div>
                         </div>
-                        <div>
-                            <div class="mb-1 flex items-center justify-between">
-                                <label class="block text-sm font-medium text-gray-700">Config JSON</label>
-                                <button type="button" class="rounded border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700" @click="loadEditorFromForm">
-                                    Reload Editor dari JSON
-                                </button>
-                            </div>
-                            <textarea v-model="form.config_json_text" class="min-h-56 w-full rounded-lg border-gray-300 font-mono text-xs" />
-                            <p v-if="form.errors.config_json_text" class="mt-1 text-xs text-rose-600">{{ form.errors.config_json_text }}</p>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Print Layout JSON</label>
-                            <textarea v-model="form.print_layout_json_text" class="min-h-40 w-full rounded-lg border-gray-300 font-mono text-xs" />
-                            <p v-if="form.errors.print_layout_json_text" class="mt-1 text-xs text-rose-600">{{ form.errors.print_layout_json_text }}</p>
-                        </div>
+                        <textarea v-model="form.config_json_text" class="hidden" aria-hidden="true" tabindex="-1" />
+                        <textarea v-model="form.print_layout_json_text" class="hidden" aria-hidden="true" tabindex="-1" />
                         <label class="flex items-center gap-3 text-sm text-gray-700">
                             <input v-model="form.is_active" class="rounded border-gray-300" type="checkbox" />
                             Template aktif
