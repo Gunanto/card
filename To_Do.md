@@ -175,3 +175,168 @@ Target utama:
   - Drag-and-drop tersimpan akurat.
   - Field DB tampil sesuai source.
   - Hasil PDF A4 konsisten dengan preview editor.
+
+## 7) Rencana Implementasi Dark/Light Mode (Bertahap & Minim Risiko)
+
+Tujuan:
+- Menyediakan mode `light` dan `dark` di seluruh aplikasi tanpa refactor besar sekaligus.
+- Menjaga stabilitas UI operasional (dashboard, form CRUD, import, generate, monitoring).
+
+Prinsip implementasi:
+- Terapkan bertahap per-layout lalu per-halaman, bukan big-bang.
+- Hindari hardcoded warna baru; pakai token warna terpusat.
+- Rilis dengan feature flag agar mudah rollback.
+
+### Fase 1 - Fondasi Theme (Token + Strategy)
+- Tetapkan strategi dark mode berbasis class (`html.dark`) agar kontrol eksplisit.
+- Definisikan token semantik minimum:
+  - `--bg`, `--surface`, `--surface-2`, `--text`, `--text-muted`, `--border`, `--primary`.
+- Mapping token ke utility class Tailwind/CSS agar komponen lama bisa migrasi bertahap.
+- Tambahkan fallback aman untuk browser lama (default light).
+
+### Fase 2 - Theme State & Persistensi
+- Buat store/composable theme (mis. `useTheme`) untuk:
+  - `light | dark | system`.
+  - simpan preferensi ke `localStorage`.
+  - sinkronisasi ke class root document.
+- Tambahkan toggle di `AuthenticatedLayout` dan `GuestLayout`.
+- Tambahkan inisialisasi awal sebelum app mount untuk menghindari flash mode.
+
+### Fase 3 - Migrasi Komponen Shared (Prioritas Tinggi)
+- Migrasikan komponen reusable dulu:
+  - button, input, select, textarea, table wrapper, modal, badge, card, dropdown.
+- Ganti penggunaan warna hardcoded ke token semantik.
+- Tambahkan state aksesibilitas:
+  - hover/focus/disabled/error harus tetap terbaca di dark dan light.
+
+### Fase 4 - Migrasi Halaman Operasional
+- Urutan migrasi halaman:
+  1. `Dashboard`
+  2. `Students`, `Classrooms`, `Institutions`
+  3. `Imports`, `GenerateBatches`, `MediaAssets`
+  4. `CardTemplates`, `Users`, `Profile`
+- Setiap halaman wajib lolos visual check desktop + mobile sebelum lanjut ke halaman berikutnya.
+
+### Fase 5 - Halaman Publik & Landing
+- Sinkronkan `Welcome.vue` dengan token theme, termasuk section hero, card fitur, roadmap, footer.
+- Pastikan kontras teks merah brand (`#FF2D20`) tetap memenuhi keterbacaan di background dark.
+
+### Fase 6 - Integrasi Pihak Ketiga & Aset
+- Audit komponen pihak ketiga (datepicker, chart, preview library jika ada).
+- Siapkan varian aset untuk dark bila perlu (logo/ikon yang hilang kontras).
+- Validasi screenshot untuk komponen yang tidak otomatis mengikuti class dark.
+
+### Fase 7 - QA, A11y, dan Gate Rilis
+- Tambah checklist QA tema:
+  - kontras teks minimum WCAG AA untuk teks normal.
+  - tidak ada teks/informasi yang hilang di dark mode.
+  - focus ring tetap terlihat.
+- Tambah smoke test visual untuk rute utama pada 2 mode.
+- Rilis bertahap:
+  - fase 1: internal/staging.
+  - fase 2: enable ke sebagian user (opsional).
+  - fase 3: default aktif setelah stabil.
+
+### Risiko & Mitigasi
+- Risiko: inkonsistensi warna lintas halaman.
+  - Mitigasi: token semantik + migrasi komponen shared terlebih dahulu.
+- Risiko: komponen lama hardcoded sulit terbaca di dark.
+  - Mitigasi: lint rule/review checklist untuk larangan hardcoded warna baru.
+- Risiko: regresi visual setelah merge besar.
+  - Mitigasi: batching kecil per modul + screenshot regression check.
+
+### Definisi Selesai Dark/Light Mode
+- Toggle mode tersedia di guest dan authenticated layout.
+- Semua halaman utama terbaca baik pada light/dark (tanpa teks hilang).
+- Komponen inti (form, table, modal, nav) konsisten di kedua mode.
+- Tidak ada blocker aksesibilitas kritis (kontras/focus) pada flow utama.
+
+### Breakdown Eksekusi Mingguan (Siap Operasional)
+
+#### Week 1 - Fondasi & Shared Components
+- [ ] Setup token warna semantik global (`--bg`, `--surface`, `--text`, `--border`, dst).
+- [ ] Aktifkan strategy `html.dark` + mode `light/dark/system`.
+- [ ] Implement `useTheme` + persistensi `localStorage`.
+- [ ] Tambahkan toggle mode di `AuthenticatedLayout` + `GuestLayout`.
+- [ ] Migrasi komponen shared prioritas:
+  - [ ] button
+  - [ ] input/select/textarea
+  - [ ] modal
+  - [ ] dropdown
+  - [ ] badge/card/table wrapper
+- [ ] QA cepat: cek visual 2 mode pada halaman login + dashboard.
+
+#### Week 2 - Migrasi Halaman Operasional
+- [ ] Migrasi `Dashboard` ke token theme.
+- [ ] Migrasi `Students`, `Classrooms`, `Institutions`.
+- [ ] Migrasi `Imports`, `GenerateBatches`, `MediaAssets`.
+- [ ] Migrasi `CardTemplates`, `Users`, `Profile`.
+- [ ] Rapikan hardcoded warna yang tersisa pada komponen halaman.
+- [ ] QA per-modul desktop/mobile (light/dark) sebelum lanjut modul berikutnya.
+
+#### Week 3 - Halaman Publik, Third-Party, dan Hardening
+- [ ] Sinkronkan `Welcome.vue` full token dark/light.
+- [ ] Validasi warna brand merah tetap readable pada dark background.
+- [ ] Audit komponen/asset third-party (chart/datepicker/preview).
+- [ ] Tambah smoke test visual untuk rute utama (2 mode).
+- [ ] Tambah checklist aksesibilitas (kontras, focus ring, disabled/error state).
+- [ ] Uji staging + bugfix final.
+
+#### Week 4 - Rollout Bertahap & Stabilization
+- [ ] Aktifkan via feature flag untuk internal.
+- [ ] Monitoring error visual/regresi dari feedback user internal.
+- [ ] Perbaikan cepat untuk edge-case lintas browser/device.
+- [ ] Aktifkan umum setelah sign-off QA + UAT.
+
+### PIC & Output per Minggu (Template)
+- PIC Frontend:
+  - Output: PR komponen/theme + screenshot before/after.
+- PIC QA:
+  - Output: checklist validasi 2 mode per halaman + issue list.
+- PIC Reviewer:
+  - Output: approval aksesibilitas minimum + keputusan go/no-go release.
+
+### Estimasi Effort (S/M/L + Jam)
+
+Catatan skala:
+- `S` = kecil (1-3 jam)
+- `M` = menengah (4-8 jam)
+- `L` = besar (9-16 jam)
+
+#### Week 1 - Fondasi & Shared Components
+- Setup token warna semantik global: `M (4-6 jam)`
+- Strategy `html.dark` + mode `light/dark/system`: `S (2-3 jam)`
+- `useTheme` + persistensi `localStorage`: `S (2-3 jam)`
+- Toggle mode di 2 layout utama: `S (1-2 jam)`
+- Migrasi komponen shared prioritas: `L (10-14 jam)`
+- QA cepat login + dashboard: `S (2-3 jam)`
+- Total indikatif Week 1: `21-31 jam`
+
+#### Week 2 - Migrasi Halaman Operasional
+- Dashboard: `S (2-3 jam)`
+- Students/Classrooms/Institutions: `L (9-14 jam)`
+- Imports/GenerateBatches/MediaAssets: `L (9-14 jam)`
+- CardTemplates/Users/Profile: `L (9-14 jam)`
+- Rapikan hardcoded warna tersisa: `M (4-6 jam)`
+- QA per-modul desktop/mobile: `M (5-8 jam)`
+- Total indikatif Week 2: `38-59 jam`
+
+#### Week 3 - Publik, Third-Party, Hardening
+- Sinkronisasi `Welcome.vue` full theme: `S (2-4 jam)`
+- Validasi kontras warna brand: `S (1-2 jam)`
+- Audit komponen/asset third-party: `M (4-8 jam)`
+- Smoke test visual rute utama (2 mode): `M (4-6 jam)`
+- Checklist aksesibilitas + perbaikan: `M (5-8 jam)`
+- Uji staging + bugfix final: `M (4-8 jam)`
+- Total indikatif Week 3: `20-36 jam`
+
+#### Week 4 - Rollout & Stabilization
+- Aktivasi feature flag internal: `S (1-2 jam)`
+- Monitoring feedback + triase issue: `M (4-8 jam)`
+- Fix edge-case browser/device: `M (4-8 jam)`
+- Aktivasi umum + sign-off: `S (2-3 jam)`
+- Total indikatif Week 4: `11-21 jam`
+
+#### Total Program (indikatif)
+- Rentang total: `90-147 jam`.
+- Dengan 1 frontend + 1 QA paruh waktu: estimasi `3-4 minggu`.

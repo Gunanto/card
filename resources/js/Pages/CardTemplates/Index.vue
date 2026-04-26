@@ -103,12 +103,35 @@ const textColorOptions = [
     { value: '#EC4899', label: 'Pink' },
 ];
 
+const templateSizePresets = [
+    { value: 'A4_PORTRAIT', label: 'A4 210 x 297 (portrait)', width_mm: 210, height_mm: 297 },
+    { value: 'A4_LANDSCAPE', label: 'A4 297 x 210 (landscape)', width_mm: 297, height_mm: 210 },
+    { value: 'CARD_1', label: 'Kartu-1 85.6 x 54 (landscape)', width_mm: 85.6, height_mm: 54 },
+    { value: 'CARD_2', label: 'Kartu-2 54 x 85.6 (portrait)', width_mm: 54, height_mm: 85.6 },
+    { value: 'POSTCARD_1', label: 'Kartu Pos-1 148 x 105 (landscape)', width_mm: 148, height_mm: 105 },
+    { value: 'POSTCARD_2', label: 'Kartu Pos-2 105 x 148 (portrait)', width_mm: 105, height_mm: 148 },
+];
+
+const customSizePresetValue = '__CUSTOM__';
+const mmTolerance = 0.01;
+
+const findSizePresetByMm = (widthMm, heightMm) => {
+    const width = roundMm(widthMm);
+    const height = roundMm(heightMm);
+
+    return templateSizePresets.find((preset) => (
+        Math.abs(roundMm(preset.width_mm) - width) <= mmTolerance
+        && Math.abs(roundMm(preset.height_mm) - height) <= mmTolerance
+    )) ?? null;
+};
+
 const blankForm = () => ({
     institution_id: props.forcedInstitutionId ?? '',
     card_type_id: props.cardTypes[0]?.id ?? '',
     name: '',
     width_mm: 85.6,
     height_mm: 54,
+    size_preset: 'CARD_1',
     background_front_media_id: '',
     background_back_media_id: '',
     config_json_text: props.defaults.config_json_text,
@@ -331,6 +354,9 @@ const setForm = (values = {}) => {
         form[key] = values[key] ?? next[key];
     });
 
+    const matchedPreset = findSizePresetByMm(form.width_mm, form.height_mm);
+    form.size_preset = matchedPreset?.value ?? customSizePresetValue;
+
     editorConfig.value.canvas.width_mm = toNumber(form.width_mm, 85.6);
     editorConfig.value.canvas.height_mm = toNumber(form.height_mm, 54);
 };
@@ -447,6 +473,29 @@ const sortedElements = computed(() => (
 const mmToPx = (mm) => toNumber(mm, 0) * mmScale;
 const pxToMm = (px) => px / mmScale;
 const previewScale = 6;
+
+const customSizeOption = computed(() => {
+    const preset = findSizePresetByMm(form.width_mm, form.height_mm);
+    if (preset) return null;
+
+    return {
+        value: customSizePresetValue,
+        label: `Ukuran Tersimpan (${roundMm(form.width_mm)} x ${roundMm(form.height_mm)} mm)`,
+        width_mm: toNumber(form.width_mm, 85.6),
+        height_mm: toNumber(form.height_mm, 54),
+    };
+});
+
+const templateSizeOptions = computed(() => (
+    customSizeOption.value
+        ? [customSizeOption.value, ...templateSizePresets]
+        : templateSizePresets
+));
+
+const templateSizeLabelByMm = (widthMm, heightMm) => {
+    const preset = findSizePresetByMm(widthMm, heightMm);
+    return preset?.label ?? `Custom ${roundMm(widthMm)} x ${roundMm(heightMm)} (mm)`;
+};
 
 const sourceLabel = (source) => {
     const candidate = [...textSourceOptions, ...imageSourceOptions]
@@ -895,7 +944,20 @@ const resetToDefaultEditor = () => {
 const applyCanvasSizeFromForm = () => {
     editorConfig.value.canvas.width_mm = toNumber(form.width_mm, 85.6);
     editorConfig.value.canvas.height_mm = toNumber(form.height_mm, 54);
+    const matchedPreset = findSizePresetByMm(form.width_mm, form.height_mm);
+    form.size_preset = matchedPreset?.value ?? customSizePresetValue;
     commitEditorChange();
+};
+
+const applyCanvasSizePreset = () => {
+    if (!form.size_preset || form.size_preset === customSizePresetValue) return;
+
+    const selectedPreset = templateSizePresets.find((preset) => preset.value === form.size_preset);
+    if (!selectedPreset) return;
+
+    form.width_mm = selectedPreset.width_mm;
+    form.height_mm = selectedPreset.height_mm;
+    applyCanvasSizeFromForm();
 };
 
 const onSelectedElementInput = () => {
@@ -1002,15 +1064,22 @@ onBeforeUnmount(() => {
                             <input v-model="form.name" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
                             <p v-if="form.errors.name" class="mt-1 text-xs text-rose-600">{{ form.errors.name }}</p>
                         </div>
-                        <div class="grid gap-4 md:grid-cols-2">
+                        <div>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Lebar (mm)</label>
-                                <input v-model="form.width_mm" class="w-full rounded-lg border-gray-300 text-sm" type="number" step="0.1" @change="applyCanvasSizeFromForm" />
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Ukuran Template</label>
+                                <select
+                                    v-model="form.size_preset"
+                                    class="w-full rounded-lg border-gray-300 text-sm"
+                                    @change="applyCanvasSizePreset"
+                                >
+                                    <option v-for="option in templateSizeOptions" :key="option.value" :value="option.value">
+                                        {{ option.label }}
+                                    </option>
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Ukuran aktif: {{ roundMm(form.width_mm) }} x {{ roundMm(form.height_mm) }} mm
+                                </p>
                                 <p v-if="form.errors.width_mm" class="mt-1 text-xs text-rose-600">{{ form.errors.width_mm }}</p>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Tinggi (mm)</label>
-                                <input v-model="form.height_mm" class="w-full rounded-lg border-gray-300 text-sm" type="number" step="0.1" @change="applyCanvasSizeFromForm" />
                                 <p v-if="form.errors.height_mm" class="mt-1 text-xs text-rose-600">{{ form.errors.height_mm }}</p>
                             </div>
                         </div>
@@ -1292,7 +1361,10 @@ onBeforeUnmount(() => {
                                         <p class="text-xs text-gray-500">{{ template.card_type_name }}</p>
                                     </td>
                                     <td class="px-3 py-3 text-gray-600">{{ template.institution_name }}</td>
-                                    <td class="px-3 py-3 text-gray-600">{{ template.width_mm }} x {{ template.height_mm }} mm</td>
+                                    <td class="px-3 py-3 text-gray-600">
+                                        <p>{{ template.width_mm }} x {{ template.height_mm }} mm</p>
+                                        <p class="text-xs text-gray-500">{{ templateSizeLabelByMm(template.width_mm, template.height_mm) }}</p>
+                                    </td>
                                     <td class="px-3 py-3 text-gray-600">{{ template.is_active ? 'Active' : 'Inactive' }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex flex-wrap gap-2">
@@ -1350,7 +1422,7 @@ onBeforeUnmount(() => {
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900">{{ previewTemplate.name }}</h3>
                         <p class="mt-1 text-sm text-gray-500">
-                            {{ previewTemplate.card_type_name }} - {{ previewTemplate.width_mm }} x {{ previewTemplate.height_mm }} mm
+                            {{ previewTemplate.card_type_name }} - {{ templateSizeLabelByMm(previewTemplate.width_mm, previewTemplate.height_mm) }}
                         </p>
                     </div>
                     <button
