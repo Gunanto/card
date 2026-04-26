@@ -27,9 +27,21 @@ Route::get('/', function (): RedirectResponse|Response {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => false,
-        'appName' => config('app.name'),
     ]);
 });
+
+Route::get('/demo', fn (): RedirectResponse => redirect('/#fitur'))->name('landing.demo');
+Route::get('/template', fn (): RedirectResponse => redirect('/#template'))->name('landing.template');
+Route::get('/harga', fn (): RedirectResponse => redirect('/#harga'))->name('landing.pricing');
+Route::get('/daftar', function (): RedirectResponse {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return Route::has('register')
+        ? redirect()->route('register')
+        : redirect()->route('login');
+})->name('landing.signup');
 
 Route::get('/dashboard', function () {
     $user = auth()->user();
