@@ -264,19 +264,19 @@ onBeforeUnmount(() => {
     <AuthenticatedLayout>
         <template #header>
             <div>
-                <h2 class="text-xl font-semibold text-gray-800">Generate Batches</h2>
-                <p class="text-sm text-gray-500">Queue dasar per-student dan simpan hasil render ke storage.</p>
+                <h2 class="text-xl font-semibold text-[var(--app-text)]">Generate Batches</h2>
+                <p class="text-sm text-[var(--app-text-muted)]">Queue dasar per-student dan simpan hasil render ke storage.</p>
             </div>
         </template>
 
         <div class="py-8">
             <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[0.95fr,1.45fr] lg:px-8">
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">Buat Batch Baru</h3>
+                <section class="theme-surface rounded-xl border p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">Buat Batch Baru</h3>
                     <form class="mt-6 space-y-4" @submit.prevent="submit">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Template</label>
-                            <select v-model="form.template_id" class="w-full rounded-lg border-gray-300 text-sm">
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Template</label>
+                            <select v-model="form.template_id" class="theme-input w-full rounded-lg text-sm">
                                 <option v-for="template in templates" :key="template.id" :value="template.id">
                                     {{ template.name }}
                                 </option>
@@ -284,26 +284,26 @@ onBeforeUnmount(() => {
                         </div>
                         <div>
                             <div class="mb-2 flex items-center justify-between">
-                                <label class="block text-sm font-medium text-gray-700">Siswa</label>
+                                <label class="block text-sm font-medium text-[var(--app-text-muted)]">Siswa</label>
                                 <div class="flex gap-2">
-                                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700" @click="selectAllVisible">
+                                    <button type="button" class="theme-btn-secondary rounded-lg px-3 py-1 text-xs font-medium" @click="selectAllVisible">
                                         Pilih Semua
                                     </button>
-                                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700" @click="clearSelection">
+                                    <button type="button" class="theme-btn-secondary rounded-lg px-3 py-1 text-xs font-medium" @click="clearSelection">
                                         Kosongkan
                                     </button>
                                 </div>
                             </div>
-                            <div class="max-h-80 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3">
+                            <div class="max-h-80 space-y-2 overflow-y-auto rounded-lg border border-[var(--app-border)] p-3">
                                 <label
                                     v-for="student in visibleStudents"
                                     :key="student.id"
-                                    class="flex items-start gap-3 rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                                    class="flex items-start gap-3 rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm"
                                 >
-                                    <input :checked="form.student_ids.includes(student.id)" class="mt-1 rounded border-gray-300" type="checkbox" @change="toggleStudent(student.id)" />
+                                    <input :checked="form.student_ids.includes(student.id)" class="mt-1 rounded border-[var(--app-border)]" type="checkbox" @change="toggleStudent(student.id)" />
                                     <span>
-                                        <span class="block font-medium text-gray-900">{{ student.name }}</span>
-                                        <span class="block text-xs text-gray-500">
+                                        <span class="block font-medium text-[var(--app-text)]">{{ student.name }}</span>
+                                        <span class="block text-xs text-[var(--app-text-muted)]">
                                             {{ student.student_code }} / {{ student.classroom_name || '-' }} / {{ student.institution_name }}
                                         </span>
                                     </span>
@@ -311,20 +311,20 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Options JSON</label>
-                            <textarea v-model="form.options_json_text" class="min-h-28 w-full rounded-lg border-gray-300 font-mono text-xs" />
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Options JSON</label>
+                            <textarea v-model="form.options_json_text" class="theme-input min-h-28 w-full rounded-lg font-mono text-xs" />
                         </div>
-                        <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+                        <button type="submit" class="theme-btn-primary rounded-lg px-4 py-2 text-sm font-medium">
                             Queue Batch
                         </button>
                     </form>
                 </section>
 
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <section class="theme-surface rounded-xl border p-6 shadow-sm">
                     <div class="flex items-center justify-between gap-3">
-                        <h3 class="text-lg font-semibold text-gray-900">Riwayat Batch</h3>
-                        <label class="flex items-center gap-2 text-xs text-gray-600">
-                            <input v-model="autoRefresh" class="rounded border-gray-300" type="checkbox">
+                        <h3 class="text-lg font-semibold text-[var(--app-text)]">Riwayat Batch</h3>
+                        <label class="flex items-center gap-2 text-xs text-[var(--app-text-muted)]">
+                            <input v-model="autoRefresh" class="rounded border-[var(--app-border)]" type="checkbox">
                             Auto refresh
                         </label>
                     </div>
@@ -349,15 +349,15 @@ onBeforeUnmount(() => {
                         </p>
                     </div>
                     <div class="mt-4 space-y-4">
-                        <article v-for="batch in batches" :key="batch.id" class="rounded-xl border border-gray-200 p-4">
+                        <article v-for="batch in batches" :key="batch.id" class="rounded-xl border border-[var(--app-border)] p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-900">Batch #{{ batch.id }} - {{ batch.template_name }}</p>
-                                    <p class="text-xs text-gray-500">
+                                    <p class="text-sm font-semibold text-[var(--app-text)]">Batch #{{ batch.id }} - {{ batch.template_name }}</p>
+                                    <p class="text-xs text-[var(--app-text-muted)]">
                                         {{ batch.institution_name }} / oleh {{ batch.requested_by_name }} / {{ batch.created_at }}
                                     </p>
                                 </div>
-                                <div class="text-sm text-gray-700">
+                                <div class="text-sm text-[var(--app-text)]">
                                     <p class="flex items-center gap-2">
                                         <span>Status:</span>
                                         <span
@@ -372,7 +372,7 @@ onBeforeUnmount(() => {
                                         </span>
                                     </p>
                                     <p>{{ batch.success_count }} sukses / {{ batch.failed_count }} gagal / {{ batch.total_cards }} total</p>
-                                    <p v-if="batch.total_cards > 0" class="text-xs text-gray-500">
+                                    <p v-if="batch.total_cards > 0" class="text-xs text-[var(--app-text-muted)]">
                                         progress: {{ Math.round(((batch.success_count + batch.failed_count) / batch.total_cards) * 100) }}%
                                     </p>
                                     <div class="mt-2 flex flex-wrap gap-2">
@@ -396,18 +396,18 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
                             <div class="mt-4 overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <table class="min-w-full divide-y divide-[var(--app-border)] text-sm">
                                     <thead>
-                                        <tr class="text-left text-gray-500">
+                                        <tr class="text-left text-[var(--app-text-muted)]">
                                             <th class="px-3 py-2 font-medium">Siswa</th>
                                             <th class="px-3 py-2 font-medium">Status</th>
                                             <th class="px-3 py-2 font-medium">Error</th>
                                             <th class="px-3 py-2 font-medium">PDF</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-gray-100">
+                                    <tbody class="divide-y divide-[var(--app-border)]">
                                         <tr v-for="generatedCard in batch.generated_cards" :key="generatedCard.id">
-                                            <td class="px-3 py-2 text-gray-700">{{ generatedCard.student_name }}</td>
+                                            <td class="px-3 py-2 text-[var(--app-text)]">{{ generatedCard.student_name }}</td>
                                             <td class="px-3 py-2">
                                                 <span
                                                     class="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium"
@@ -430,7 +430,7 @@ onBeforeUnmount(() => {
                                                 >
                                                     Download
                                                 </button>
-                                                <span v-else class="text-xs text-gray-400">Belum ada</span>
+                                                <span v-else class="text-xs text-[var(--app-text-muted)]">Belum ada</span>
                                             </td>
                                         </tr>
                                     </tbody>

@@ -1052,16 +1052,16 @@ onBeforeUnmount(() => {
     <AuthenticatedLayout>
         <template #header>
             <div>
-                <h2 class="text-xl font-semibold text-gray-800">Card Templates</h2>
-                <p class="text-sm text-gray-500">Simpan konfigurasi elemen kartu dan print layout A4 2x5.</p>
+                <h2 class="text-xl font-semibold text-[var(--app-text)]">Card Templates</h2>
+                <p class="text-sm text-[var(--app-text-muted)]">Simpan konfigurasi elemen kartu dan print layout A4 2x5.</p>
             </div>
         </template>
 
         <div class="py-8">
             <div class="mx-auto flex max-w-7xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
-                <section class="order-2 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">{{ editingId ? 'Edit Template' : 'Buat Template' }}</h3>
-                    <p class="mt-1 text-sm text-gray-500">Background media baru bisa dipilih setelah template memiliki ID dan file diunggah.</p>
+                <section class="order-2 theme-surface rounded-xl border border-[var(--app-border)] p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">{{ editingId ? 'Edit Template' : 'Buat Template' }}</h3>
+                    <p class="mt-1 text-sm text-[var(--app-text-muted)]">Background media baru bisa dipilih setelah template memiliki ID dan file diunggah.</p>
                     <div v-if="statusMessage" class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                         {{ statusMessage }}
                     </div>
@@ -1075,8 +1075,8 @@ onBeforeUnmount(() => {
                     <form class="mt-6 space-y-4" @submit.prevent="submit">
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Institusi</label>
-                                <select v-model="form.institution_id" class="w-full rounded-lg border-gray-300 text-sm" :disabled="forcedInstitutionId !== null">
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Institusi</label>
+                                <select v-model="form.institution_id" class="theme-input w-full rounded-lg text-sm" :disabled="forcedInstitutionId !== null">
                                     <option value="">Global</option>
                                     <option v-for="institution in institutions" :key="institution.id" :value="institution.id">
                                         {{ institution.name }}
@@ -1084,8 +1084,8 @@ onBeforeUnmount(() => {
                                 </select>
                             </div>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Jenis Kartu</label>
-                                <select v-model="form.card_type_id" class="w-full rounded-lg border-gray-300 text-sm">
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Jenis Kartu</label>
+                                <select v-model="form.card_type_id" class="theme-input w-full rounded-lg text-sm">
                                     <option v-for="cardType in cardTypes" :key="cardType.id" :value="cardType.id">
                                         {{ cardType.name }}
                                     </option>
@@ -1094,23 +1094,23 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Nama Template</label>
-                            <input v-model="form.name" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Nama Template</label>
+                            <input v-model="form.name" class="theme-input w-full rounded-lg text-sm" type="text" />
                             <p v-if="form.errors.name" class="mt-1 text-xs text-rose-600">{{ form.errors.name }}</p>
                         </div>
                         <div>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Ukuran Template</label>
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Ukuran Template</label>
                                 <select
                                     v-model="form.size_preset"
-                                    class="w-full rounded-lg border-gray-300 text-sm"
+                                    class="theme-input w-full rounded-lg text-sm"
                                     @change="applyCanvasSizePreset"
                                 >
                                     <option v-for="option in templateSizeOptions" :key="option.value" :value="option.value">
                                         {{ option.label }}
                                     </option>
                                 </select>
-                                <p class="mt-1 text-xs text-gray-500">
+                                <p class="mt-1 text-xs text-[var(--app-text-muted)]">
                                     Ukuran aktif: {{ roundMm(form.width_mm) }} x {{ roundMm(form.height_mm) }} mm
                                 </p>
                                 <p v-if="form.errors.width_mm" class="mt-1 text-xs text-rose-600">{{ form.errors.width_mm }}</p>
@@ -1119,8 +1119,8 @@ onBeforeUnmount(() => {
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Background Depan</label>
-                                <select v-model="form.background_front_media_id" class="w-full rounded-lg border-gray-300 text-sm" :disabled="!editingId">
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Background Depan</label>
+                                <select v-model="form.background_front_media_id" class="theme-input w-full rounded-lg text-sm" :disabled="!editingId">
                                     <option value="">Belum dipilih</option>
                                     <option
                                         v-for="asset in availableBackgrounds.filter((item) => item.category === 'template_background_front')"
@@ -1132,8 +1132,8 @@ onBeforeUnmount(() => {
                                 </select>
                             </div>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Background Belakang</label>
-                                <select v-model="form.background_back_media_id" class="w-full rounded-lg border-gray-300 text-sm" :disabled="!editingId">
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Background Belakang</label>
+                                <select v-model="form.background_back_media_id" class="theme-input w-full rounded-lg text-sm" :disabled="!editingId">
                                     <option value="">Belum dipilih</option>
                                     <option
                                         v-for="asset in availableBackgrounds.filter((item) => item.category === 'template_background_back')"
@@ -1145,17 +1145,17 @@ onBeforeUnmount(() => {
                                 </select>
                             </div>
                         </div>
-                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <div class="theme-surface-muted rounded-xl border border-[var(--app-border)] p-4">
                             <div class="flex flex-wrap items-center justify-between gap-3">
-                                <h4 class="text-sm font-semibold text-gray-900">Visual Editor (MVP)</h4>
+                                <h4 class="text-sm font-semibold text-[var(--app-text)]">Visual Editor (MVP)</h4>
                                 <div class="flex flex-wrap gap-2">
-                                    <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700">
-                                        <input v-model="snapToGrid" type="checkbox" class="rounded border-gray-300" @change="commitEditorChange" />
+                                    <label class="inline-flex items-center gap-2 rounded-lg border border-[var(--app-border)] px-3 py-1.5 text-xs font-medium text-[var(--app-text-muted)]">
+                                        <input v-model="snapToGrid" type="checkbox" class="rounded border-[var(--app-border)]" @change="commitEditorChange" />
                                         Snap
                                     </label>
                                     <select
                                         v-model.number="snapStepMm"
-                                        class="rounded-lg border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700"
+                                        class="theme-input rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--app-text-muted)]"
                                         :disabled="!snapToGrid"
                                         @change="commitEditorChange"
                                     >
@@ -1164,17 +1164,17 @@ onBeforeUnmount(() => {
                                         <option :value="1">1 mm</option>
                                         <option :value="2">2 mm</option>
                                     </select>
-                                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50" :disabled="!canUndo" @click="undoEditor">
+                                    <button type="button" class="rounded-lg border border-[var(--app-border)] px-3 py-1.5 text-xs font-medium text-[var(--app-text-muted)] disabled:opacity-50" :disabled="!canUndo" @click="undoEditor">
                                         Undo
                                     </button>
-                                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50" :disabled="!canRedo" @click="redoEditor">
+                                    <button type="button" class="rounded-lg border border-[var(--app-border)] px-3 py-1.5 text-xs font-medium text-[var(--app-text-muted)] disabled:opacity-50" :disabled="!canRedo" @click="redoEditor">
                                         Redo
                                     </button>
                                     <button
                                         v-for="preset in elementPresets"
                                         :key="preset.value"
                                         type="button"
-                                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700"
+                                        class="rounded-lg border border-[var(--app-border)] px-3 py-1.5 text-xs font-medium text-[var(--app-text-muted)]"
                                         @click="addPresetElement(preset.value)"
                                     >
                                         {{ preset.label }}
@@ -1188,12 +1188,12 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
 
-                            <div class="mt-4 rounded-lg border border-gray-200 bg-white p-3">
-                                <h5 class="text-xs font-semibold uppercase tracking-wide text-gray-700">Properti Elemen</h5>
+                            <div class="mt-4 theme-surface rounded-lg border border-[var(--app-border)] p-3">
+                                <h5 class="text-xs font-semibold uppercase tracking-wide text-[var(--app-text-muted)]">Properti Elemen</h5>
                                 <div v-if="selectedElement" class="mt-3 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
                                     <label class="block">
-                                        <span class="mb-1 block text-gray-600">Type</span>
-                                        <select v-model="selectedElement.type" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Type</span>
+                                        <select v-model="selectedElement.type" class="theme-input w-full rounded text-xs" @change="onSelectedElementCommit">
                                             <option value="text">text</option>
                                             <option value="photo">photo</option>
                                             <option value="image">image</option>
@@ -1201,80 +1201,80 @@ onBeforeUnmount(() => {
                                     </label>
                                     <template v-if="selectedElement.type === 'text'">
                                         <label class="block">
-                                            <span class="mb-1 block text-gray-600">Mode</span>
-                                            <select v-model="selectedElement.mode" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                            <span class="mb-1 block text-[var(--app-text-muted)]">Mode</span>
+                                            <select v-model="selectedElement.mode" class="theme-input w-full rounded text-xs" @change="onSelectedElementCommit">
                                                 <option value="dynamic">dynamic</option>
                                                 <option value="static">static</option>
                                             </select>
                                         </label>
                                         <label v-if="selectedElement.mode === 'dynamic'" class="block sm:col-span-2 lg:col-span-2">
-                                            <span class="mb-1 block text-gray-600">Source</span>
-                                            <select v-model="selectedElement.source" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                            <span class="mb-1 block text-[var(--app-text-muted)]">Source</span>
+                                            <select v-model="selectedElement.source" class="theme-input w-full rounded text-xs" @change="onSelectedElementCommit">
                                                 <option v-for="option in textSourceOptions" :key="option.value" :value="option.value">
                                                     {{ option.label }}
                                                 </option>
                                             </select>
                                         </label>
                                         <label v-else class="block sm:col-span-2 lg:col-span-2">
-                                            <span class="mb-1 block text-gray-600">Static Text</span>
-                                            <input v-model="selectedElement.text" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                            <span class="mb-1 block text-[var(--app-text-muted)]">Static Text</span>
+                                            <input v-model="selectedElement.text" class="theme-input w-full rounded text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                         </label>
                                     </template>
                                     <label v-else class="block sm:col-span-2 lg:col-span-2">
-                                        <span class="mb-1 block text-gray-600">Source</span>
-                                        <select v-model="selectedElement.source" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Source</span>
+                                        <select v-model="selectedElement.source" class="theme-input w-full rounded text-xs" @change="onSelectedElementCommit">
                                             <option v-for="option in imageSourceOptions" :key="option.value" :value="option.value">
                                                 {{ option.label }}
                                             </option>
                                         </select>
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-gray-600">Legacy Key</span>
-                                        <input v-model="selectedElement.key" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Legacy Key</span>
+                                        <input v-model="selectedElement.key" class="theme-input w-full rounded text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-gray-600">X (mm)</span>
-                                        <input v-model.number="selectedElement.x" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">X (mm)</span>
+                                        <input v-model.number="selectedElement.x" class="theme-input w-full rounded text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-gray-600">Y (mm)</span>
-                                        <input v-model.number="selectedElement.y" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Y (mm)</span>
+                                        <input v-model.number="selectedElement.y" class="theme-input w-full rounded text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label v-if="selectedElement.type !== 'text'" class="block">
-                                        <span class="mb-1 block text-gray-600">W (mm)</span>
-                                        <input v-model.number="selectedElement.w" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">W (mm)</span>
+                                        <input v-model.number="selectedElement.w" class="theme-input w-full rounded text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label v-if="selectedElement.type !== 'text'" class="block">
-                                        <span class="mb-1 block text-gray-600">H (mm)</span>
-                                        <input v-model.number="selectedElement.h" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">H (mm)</span>
+                                        <input v-model.number="selectedElement.h" class="theme-input w-full rounded text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-gray-600">Z</span>
-                                        <input v-model.number="selectedElement.z" class="w-full rounded border-gray-300 text-xs" type="number" step="1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Z</span>
+                                        <input v-model.number="selectedElement.z" class="theme-input w-full rounded text-xs" type="number" step="1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-gray-600">Opacity</span>
-                                        <input v-model.number="selectedElement.opacity" class="w-full rounded border-gray-300 text-xs" type="number" min="0" max="1" step="0.05" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Opacity</span>
+                                        <input v-model.number="selectedElement.opacity" class="theme-input w-full rounded text-xs" type="number" min="0" max="1" step="0.05" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label v-if="selectedElement.type === 'text'" class="block">
-                                        <span class="mb-1 block text-gray-600">Font size</span>
-                                        <input v-model.number="selectedElement.font_size" class="w-full rounded border-gray-300 text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Font size</span>
+                                        <input v-model.number="selectedElement.font_size" class="theme-input w-full rounded text-xs" type="number" step="0.1" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label v-if="selectedElement.type === 'text'" class="block">
-                                        <span class="mb-1 block text-gray-600">Weight</span>
-                                        <input v-model="selectedElement.font_weight" class="w-full rounded border-gray-300 text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Weight</span>
+                                        <input v-model="selectedElement.font_weight" class="theme-input w-full rounded text-xs" type="text" @input="onSelectedElementInput" @change="onSelectedElementCommit" />
                                     </label>
                                     <label v-if="selectedElement.type === 'text'" class="block">
-                                        <span class="mb-1 block text-gray-600">Posisi Text</span>
-                                        <select v-model="selectedElement.text_anchor" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Posisi Text</span>
+                                        <select v-model="selectedElement.text_anchor" class="theme-input w-full rounded text-xs" @change="onSelectedElementCommit">
                                             <option v-for="option in textAnchorOptions" :key="option.value" :value="option.value">
                                                 {{ option.label }}
                                             </option>
                                         </select>
                                     </label>
                                     <label v-if="selectedElement.type === 'text'" class="block sm:col-span-2 lg:col-span-2">
-                                        <span class="mb-1 block text-gray-600">Color</span>
-                                        <select v-model="selectedElement.color" class="w-full rounded border-gray-300 text-xs" @change="onSelectedElementCommit">
+                                        <span class="mb-1 block text-[var(--app-text-muted)]">Color</span>
+                                        <select v-model="selectedElement.color" class="theme-input w-full rounded text-xs" @change="onSelectedElementCommit">
                                             <option
                                                 v-if="selectedElement.color && !hasTextColorOption(selectedElement.color)"
                                                 :value="selectedElement.color"
@@ -1287,14 +1287,14 @@ onBeforeUnmount(() => {
                                         </select>
                                     </label>
                                 </div>
-                                <p v-else class="mt-3 text-xs text-gray-500">
+                                <p v-else class="mt-3 text-xs text-[var(--app-text-muted)]">
                                     Pilih elemen di canvas untuk edit properti.
                                 </p>
                             </div>
 
-                            <div class="mt-4 overflow-auto rounded-lg border border-gray-200 bg-white p-4">
+                            <div class="mt-4 overflow-auto theme-surface rounded-lg border border-[var(--app-border)] p-4">
                                 <div
-                                    class="relative rounded-md border border-dashed border-gray-300 bg-gradient-to-br from-white to-gray-100"
+                                    class="relative theme-surface-muted rounded-md border border-dashed border-[var(--app-border)]"
                                     :style="{ width: `${canvasWidthPx}px`, height: `${canvasHeightPx}px` }"
                                 >
                                     <img
@@ -1318,7 +1318,7 @@ onBeforeUnmount(() => {
                                         <template v-else>
                                             <div
                                                 class="rounded border px-1 py-0.5 text-[10px] leading-tight"
-                                                :class="selectedElementIndex === index ? 'border-sky-500 bg-sky-50 text-sky-900' : 'border-gray-300 bg-white text-gray-600'"
+                                                :class="selectedElementIndex === index ? 'border-sky-500 bg-sky-50 text-sky-900' : 'border-[var(--app-border)] theme-surface text-[var(--app-text-muted)]'"
                                             >
                                                 <template v-if="element.type === 'photo'">
                                                     P: {{ selectedElementPreviewLabel(element) }}
@@ -1335,37 +1335,37 @@ onBeforeUnmount(() => {
                                         />
                                     </div>
                                 </div>
-                                <p class="mt-2 text-[11px] text-gray-500">
+                                <p class="mt-2 text-[11px] text-[var(--app-text-muted)]">
                                     Drag elemen untuk memindahkan posisi. Untuk elemen image/photo, tarik handle kanan-bawah untuk resize.
                                 </p>
-                                <p class="mt-1 text-[11px] text-gray-500">
+                                <p class="mt-1 text-[11px] text-[var(--app-text-muted)]">
                                     Shortcut: Ctrl/Cmd+Z untuk undo, Ctrl/Cmd+Shift+Z atau Ctrl/Cmd+Y untuk redo.
                                 </p>
                             </div>
                         </div>
                         <textarea v-model="form.config_json_text" class="hidden" aria-hidden="true" tabindex="-1" />
                         <textarea v-model="form.print_layout_json_text" class="hidden" aria-hidden="true" tabindex="-1" />
-                        <label class="flex items-center gap-3 text-sm text-gray-700">
-                            <input v-model="form.is_active" class="rounded border-gray-300" type="checkbox" />
+                        <label class="flex items-center gap-3 text-sm text-[var(--app-text-muted)]">
+                            <input v-model="form.is_active" class="rounded border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-primary)]" type="checkbox" />
                             Template aktif
                         </label>
                         <div class="flex gap-3">
-                            <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" :disabled="form.processing">
+                            <button type="submit" class="theme-btn-primary rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50" :disabled="form.processing">
                                 {{ editingId ? 'Simpan Perubahan' : 'Buat Template' }}
                             </button>
-                            <button type="button" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700" @click="startCreate">
+                            <button type="button" class="theme-btn-secondary rounded-lg px-4 py-2 text-sm font-medium" @click="startCreate">
                                 Reset
                             </button>
                         </div>
                     </form>
                 </section>
 
-                <section class="order-1 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">Daftar Template</h3>
+                <section class="order-1 theme-surface rounded-xl border border-[var(--app-border)] p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">Daftar Template</h3>
                     <div class="mt-4 overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <table class="min-w-full divide-y divide-[var(--app-border)] text-sm">
                             <thead>
-                                <tr class="text-left text-gray-500">
+                                <tr class="text-left text-[var(--app-text-muted)]">
                                     <th class="px-3 py-2 font-medium">Nama</th>
                                     <th class="px-3 py-2 font-medium">Scope</th>
                                     <th class="px-3 py-2 font-medium">Ukuran</th>
@@ -1373,18 +1373,18 @@ onBeforeUnmount(() => {
                                     <th class="px-3 py-2 font-medium">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
+                            <tbody class="divide-y divide-[var(--app-border)]">
                                 <tr v-for="template in templates" :key="template.id" class="align-top">
                                     <td class="px-3 py-3">
-                                        <p class="font-medium text-gray-900">{{ template.name }}</p>
-                                        <p class="text-xs text-gray-500">{{ template.card_type_name }}</p>
+                                        <p class="font-medium text-[var(--app-text)]">{{ template.name }}</p>
+                                        <p class="text-xs text-[var(--app-text-muted)]">{{ template.card_type_name }}</p>
                                     </td>
-                                    <td class="px-3 py-3 text-gray-600">{{ template.institution_name }}</td>
-                                    <td class="px-3 py-3 text-gray-600">
+                                    <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ template.institution_name }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text-muted)]">
                                         <p>{{ template.width_mm }} x {{ template.height_mm }} mm</p>
-                                        <p class="text-xs text-gray-500">{{ templateSizeLabelByMm(template.width_mm, template.height_mm) }}</p>
+                                        <p class="text-xs text-[var(--app-text-muted)]">{{ templateSizeLabelByMm(template.width_mm, template.height_mm) }}</p>
                                     </td>
-                                    <td class="px-3 py-3 text-gray-600">{{ template.is_active ? 'Active' : 'Inactive' }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ template.is_active ? 'Active' : 'Inactive' }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex flex-wrap gap-2">
                                             <button
@@ -1401,7 +1401,7 @@ onBeforeUnmount(() => {
                                             </button>
                                             <button
                                                 type="button"
-                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--app-border)] text-[var(--app-text-muted)] hover:bg-[var(--app-surface-2)]"
                                                 title="Edit template"
                                                 @click="editTemplate(template)"
                                             >
@@ -1439,14 +1439,14 @@ onBeforeUnmount(() => {
             <div v-if="previewTemplate" class="p-5">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900">{{ previewTemplate.name }}</h3>
-                        <p class="mt-1 text-sm text-gray-500">
+                        <h3 class="text-lg font-semibold text-[var(--app-text)]">{{ previewTemplate.name }}</h3>
+                        <p class="mt-1 text-sm text-[var(--app-text-muted)]">
                             {{ previewTemplate.card_type_name }} - {{ templateSizeLabelByMm(previewTemplate.width_mm, previewTemplate.height_mm) }}
                         </p>
                     </div>
                     <button
                         type="button"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--app-border)] text-[var(--app-text-muted)] hover:bg-[var(--app-surface-2)]"
                         title="Tutup preview"
                         @click="closePreview"
                     >
@@ -1459,10 +1459,10 @@ onBeforeUnmount(() => {
 
                 <div class="mt-5 space-y-5 overflow-x-auto">
                     <div>
-                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Depan</p>
-                        <div class="inline-block rounded-xl bg-gray-100 p-3">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--app-text-muted)]">Depan</p>
+                        <div class="inline-block rounded-xl bg-[var(--app-surface-2)] p-3">
                             <div
-                                class="relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                                class="relative overflow-hidden theme-surface rounded-lg border border-[var(--app-border)] shadow-sm"
                                 :style="previewCanvasStyle"
                             >
                                 <img
@@ -1477,12 +1477,12 @@ onBeforeUnmount(() => {
                                     :style="previewElementStyle(element)"
                                 >
                                     <template v-if="element.type === 'text'">
-                                        <span class="inline-flex rounded border border-sky-300 bg-white/90 px-1 py-0.5 text-[10px] font-medium leading-tight text-sky-900 shadow-sm">
+                                        <span class="inline-flex rounded border border-sky-300 theme-surface px-1 py-0.5 text-[10px] font-medium leading-tight text-sky-900 shadow-sm">
                                             T: {{ previewTextValue(element) }}
                                         </span>
                                     </template>
                                     <template v-else>
-                                        <div class="flex h-full w-full items-center justify-center rounded border border-dashed border-gray-400 bg-white/70 text-[10px] font-medium text-gray-500">
+                                        <div class="flex h-full w-full items-center justify-center rounded border border-dashed border-[var(--app-border)] theme-surface text-[10px] font-medium text-[var(--app-text-muted)]">
                                             {{ selectedElementPreviewLabel(element) }}
                                         </div>
                                     </template>
@@ -1492,10 +1492,10 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div v-if="previewBackgroundUrl(previewTemplate, 'back')">
-                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Belakang</p>
-                        <div class="inline-block rounded-xl bg-gray-100 p-3">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--app-text-muted)]">Belakang</p>
+                        <div class="inline-block rounded-xl bg-[var(--app-surface-2)] p-3">
                             <div
-                                class="relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                                class="relative overflow-hidden theme-surface rounded-lg border border-[var(--app-border)] shadow-sm"
                                 :style="previewCanvasStyle"
                             >
                                 <img

@@ -1,3 +1,122 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    :root {
+        --app-bg: #f1f5f9;
+        --app-surface: #ffffff;
+        --app-surface-2: #f8fafc;
+        --app-border: #e2e8f0;
+        --app-text: #0f172a;
+        --app-text-muted: #64748b;
+        --app-primary: #ff2d20;
+        --app-primary-hover: #e02a1d;
+        --app-primary-contrast: #ffffff;
+        --app-danger: #dc2626;
+        --app-danger-hover: #b91c1c;
+        --app-overlay: rgba(15, 23, 42, 0.55);
+        --app-ring: rgba(255, 45, 32, 0.35);
+    }
+
+    .dark {
+        --app-bg: #0f172a;
+        --app-surface: rgba(15, 23, 42, 0.86);
+        --app-surface-2: rgba(30, 41, 59, 0.72);
+        --app-border: rgba(148, 163, 184, 0.24);
+        --app-text: #f8fafc;
+        --app-text-muted: #94a3b8;
+        --app-primary: #ff2d20;
+        --app-primary-hover: #ff4b3f;
+        --app-primary-contrast: #ffffff;
+        --app-danger: #f87171;
+        --app-danger-hover: #ef4444;
+        --app-overlay: rgba(2, 6, 23, 0.72);
+        --app-ring: rgba(59, 130, 246, 0.4);
+    }
+
+    html,
+    body {
+        background-color: var(--app-bg);
+        color: var(--app-text);
+    }
+}
+
+@layer components {
+    .theme-shell {
+        min-height: 100vh;
+        background-color: var(--app-bg);
+        color: var(--app-text);
+    }
+
+    .theme-surface {
+        background-color: var(--app-surface);
+        border-color: var(--app-border);
+        color: var(--app-text);
+    }
+
+    .theme-surface-muted {
+        background-color: var(--app-surface-2);
+        border-color: var(--app-border);
+        color: var(--app-text);
+    }
+
+    .theme-text-muted {
+        color: var(--app-text-muted);
+    }
+
+    .theme-input {
+        border: 1px solid var(--app-border);
+        background-color: var(--app-surface);
+        color: var(--app-text);
+        border-radius: 0.375rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+
+    .theme-input::placeholder {
+        color: var(--app-text-muted);
+    }
+
+    .theme-input:focus {
+        outline: none;
+        border-color: var(--app-primary);
+        box-shadow: 0 0 0 3px var(--app-ring);
+    }
+
+    .theme-btn-primary {
+        border: 1px solid transparent;
+        background-color: var(--app-primary);
+        color: var(--app-primary-contrast);
+    }
+
+    .theme-btn-primary:hover,
+    .theme-btn-primary:focus {
+        background-color: var(--app-primary-hover);
+    }
+
+    .theme-btn-secondary {
+        border: 1px solid var(--app-border);
+        background-color: var(--app-surface);
+        color: var(--app-text);
+    }
+
+    .theme-btn-secondary:hover,
+    .theme-btn-secondary:focus {
+        background-color: var(--app-surface-2);
+    }
+
+    .theme-btn-danger {
+        border: 1px solid transparent;
+        background-color: var(--app-danger);
+        color: #fff;
+    }
+
+    .theme-btn-danger:hover,
+    .theme-btn-danger:focus {
+        background-color: var(--app-danger-hover);
+    }
+
+    .theme-modal-overlay {
+        background-color: var(--app-overlay);
+    }
+}

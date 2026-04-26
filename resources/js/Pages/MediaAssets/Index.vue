@@ -185,44 +185,44 @@ onBeforeUnmount(() => {
     <AuthenticatedLayout>
         <template #header>
             <div>
-                <h2 class="text-xl font-semibold text-gray-800">Media Assets</h2>
-                <p class="text-sm text-gray-500">Upload ke disk private dan akses lewat presigned URL.</p>
+                <h2 class="text-xl font-semibold text-[var(--app-text)]">Media Assets</h2>
+                <p class="text-sm text-[var(--app-text-muted)]">Upload ke disk private dan akses lewat presigned URL.</p>
             </div>
         </template>
 
         <div class="py-8">
             <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[0.9fr,1.5fr] lg:px-8">
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">Upload Media</h3>
+                <section class="theme-surface rounded-xl border p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">Upload Media</h3>
                     <form class="mt-6 space-y-4" @submit.prevent="submit">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Kategori</label>
-                            <select v-model="form.category" class="w-full rounded-lg border-gray-300 text-sm">
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Kategori</label>
+                            <select v-model="form.category" class="theme-input w-full rounded-lg text-sm">
                                 <option v-for="category in categories" :key="category.value" :value="category.value">
                                     {{ category.label }}
                                 </option>
                             </select>
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Owner</label>
-                            <select v-model="form.owner_id" class="w-full rounded-lg border-gray-300 text-sm">
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Owner</label>
+                            <select v-model="form.owner_id" class="theme-input w-full rounded-lg text-sm">
                                 <option v-for="owner in ownerOptions" :key="owner.id" :value="owner.id">
                                     {{ owner.name }}
                                 </option>
                             </select>
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">File</label>
-                            <input class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" type="file" @input="form.file = $event.target.files[0]" />
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">File</label>
+                            <input class="theme-input w-full rounded-lg px-3 py-2 text-sm" type="file" @input="form.file = $event.target.files[0]" />
                         </div>
-                        <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+                        <button type="submit" class="theme-btn-primary rounded-lg px-4 py-2 text-sm font-medium">
                             Upload
                         </button>
                     </form>
                 </section>
 
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">Daftar Media</h3>
+                <section class="theme-surface rounded-xl border p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">Daftar Media</h3>
                     <div v-if="downloadProgress.active || downloadProgress.error" class="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-3">
                         <p class="text-xs font-medium text-sky-900">
                             {{ downloadProgress.label || 'Download' }}
@@ -244,9 +244,9 @@ onBeforeUnmount(() => {
                         </p>
                     </div>
                     <div class="mt-4 overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <table class="min-w-full divide-y divide-[var(--app-border)] text-sm">
                             <thead>
-                                <tr class="text-left text-gray-500">
+                                <tr class="text-left text-[var(--app-text-muted)]">
                                     <th class="px-3 py-2 font-medium">ID</th>
                                     <th class="px-3 py-2 font-medium">Kategori</th>
                                     <th class="px-3 py-2 font-medium">Owner</th>
@@ -255,18 +255,18 @@ onBeforeUnmount(() => {
                                     <th class="px-3 py-2 font-medium">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
+                            <tbody class="divide-y divide-[var(--app-border)]">
                                 <tr v-for="asset in assets" :key="asset.id">
-                                    <td class="px-3 py-3 font-medium text-gray-900">#{{ asset.id }}</td>
-                                    <td class="px-3 py-3 text-gray-600">{{ asset.category_label }}</td>
-                                    <td class="px-3 py-3 text-gray-600">{{ asset.owner_label }}</td>
-                                    <td class="px-3 py-3 text-gray-600">
+                                    <td class="px-3 py-3 font-medium text-[var(--app-text)]">#{{ asset.id }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text)]">{{ asset.category_label }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text)]">{{ asset.owner_label }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text)]">
                                         <p>{{ asset.original_name || '-' }}</p>
-                                        <p class="text-xs text-gray-500">{{ asset.mime_type }}</p>
+                                        <p class="text-xs text-[var(--app-text-muted)]">{{ asset.mime_type }}</p>
                                     </td>
-                                    <td class="px-3 py-3 text-gray-600">
+                                    <td class="px-3 py-3 text-[var(--app-text)]">
                                         <p>{{ asset.size_bytes }} bytes</p>
-                                        <p class="text-xs text-gray-500">{{ asset.width || '-' }} x {{ asset.height || '-' }}</p>
+                                        <p class="text-xs text-[var(--app-text-muted)]">{{ asset.width || '-' }} x {{ asset.height || '-' }}</p>
                                     </td>
                                     <td class="px-3 py-3">
                                         <button

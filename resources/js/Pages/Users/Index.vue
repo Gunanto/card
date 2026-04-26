@@ -88,12 +88,12 @@ const destroyUser = (user) => {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-800">Users</h2>
-                    <p class="text-sm text-gray-500">Kelola akun admin dan guru.</p>
+                    <h2 class="text-xl font-semibold text-[var(--app-text)]">Users</h2>
+                    <p class="text-sm text-[var(--app-text-muted)]">Kelola akun admin dan guru.</p>
                 </div>
                 <button
                     type="button"
-                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                    class="theme-btn-secondary rounded-lg px-4 py-2 text-sm font-medium"
                     @click="startCreate"
                 >
                     Form Baru
@@ -103,38 +103,38 @@ const destroyUser = (user) => {
 
         <div class="py-8">
             <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[0.9fr,1.5fr] lg:px-8">
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">
+                <section class="theme-surface rounded-xl border p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">
                         {{ editingId ? 'Edit User' : 'Tambah User' }}
                     </h3>
 
                     <form class="mt-6 space-y-4" @submit.prevent="submit">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Name</label>
-                            <input v-model="form.name" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Name</label>
+                            <input v-model="form.name" class="theme-input w-full rounded-lg text-sm" type="text" />
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Email</label>
-                            <input v-model="form.email" class="w-full rounded-lg border-gray-300 text-sm" type="email" />
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Email</label>
+                            <input v-model="form.email" class="theme-input w-full rounded-lg text-sm" type="email" />
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">
                                 Password {{ editingId ? '(kosongkan jika tidak diganti)' : '' }}
                             </label>
-                            <input v-model="form.password" class="w-full rounded-lg border-gray-300 text-sm" type="password" />
+                            <input v-model="form.password" class="theme-input w-full rounded-lg text-sm" type="password" />
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Role</label>
-                                <select v-model="form.role" class="w-full rounded-lg border-gray-300 text-sm">
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Role</label>
+                                <select v-model="form.role" class="theme-input w-full rounded-lg text-sm">
                                     <option v-for="role in roleOptions" :key="role.value" :value="role.value">
                                         {{ role.label }}
                                     </option>
                                 </select>
                             </div>
                             <div v-if="showInstitutionSelect">
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Institution</label>
-                                <select v-model="form.institution_id" class="w-full rounded-lg border-gray-300 text-sm">
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Institution</label>
+                                <select v-model="form.institution_id" class="theme-input w-full rounded-lg text-sm">
                                     <option value="">Pilih institusi</option>
                                     <option v-for="institution in institutions" :key="institution.id" :value="institution.id">
                                         {{ institution.name }}
@@ -142,17 +142,17 @@ const destroyUser = (user) => {
                                 </select>
                             </div>
                         </div>
-                        <label class="flex items-center gap-3 text-sm text-gray-700">
-                            <input v-model="form.is_active" class="rounded border-gray-300" type="checkbox" />
+                        <label class="flex items-center gap-3 text-sm text-[var(--app-text-muted)]">
+                            <input v-model="form.is_active" class="rounded border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-primary)]" type="checkbox" />
                             Active
                         </label>
                         <div class="flex gap-3">
-                            <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+                            <button type="submit" class="theme-btn-primary rounded-lg px-4 py-2 text-sm font-medium">
                                 {{ editingId ? 'Simpan Perubahan' : 'Tambah User' }}
                             </button>
                             <button
                                 type="button"
-                                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
+                                class="theme-btn-secondary rounded-lg px-4 py-2 text-sm font-medium"
                                 @click="startCreate"
                             >
                                 Reset
@@ -161,12 +161,12 @@ const destroyUser = (user) => {
                     </form>
                 </section>
 
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">Daftar Users</h3>
+                <section class="theme-surface rounded-xl border p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">Daftar Users</h3>
                     <div class="mt-4 overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <table class="min-w-full divide-y divide-[var(--app-border)] text-sm">
                             <thead>
-                                <tr class="text-left text-gray-500">
+                                <tr class="text-left text-[var(--app-text-muted)]">
                                     <th class="px-3 py-2 font-medium">Name</th>
                                     <th class="px-3 py-2 font-medium">Email</th>
                                     <th class="px-3 py-2 font-medium">Role</th>
@@ -175,25 +175,25 @@ const destroyUser = (user) => {
                                     <th class="px-3 py-2 font-medium">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
+                            <tbody class="divide-y divide-[var(--app-border)]">
                                 <tr v-for="user in users" :key="user.id" class="align-top">
-                                    <td class="px-3 py-3 font-medium text-gray-900">{{ user.name }}</td>
-                                    <td class="px-3 py-3 text-gray-600">{{ user.email }}</td>
-                                    <td class="px-3 py-3 text-gray-600">{{ user.role }}</td>
-                                    <td class="px-3 py-3 text-gray-600">{{ user.institution_name || '-' }}</td>
-                                    <td class="px-3 py-3 text-gray-600">{{ user.is_active ? 'active' : 'inactive' }}</td>
+                                    <td class="px-3 py-3 font-medium text-[var(--app-text)]">{{ user.name }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.email }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.role }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.institution_name || '-' }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text-muted)]">{{ user.is_active ? 'active' : 'inactive' }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex flex-wrap gap-2">
                                             <button
                                                 type="button"
-                                                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700"
+                                                class="theme-btn-secondary rounded-lg px-3 py-1.5 text-xs font-medium"
                                                 @click="editUser(user)"
                                             >
                                                 Edit
                                             </button>
                                             <button
                                                 type="button"
-                                                class="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-700"
+                                                class="theme-btn-danger rounded-lg px-3 py-1.5 text-xs font-medium"
                                                 @click="destroyUser(user)"
                                             >
                                                 Hapus
@@ -209,4 +209,3 @@ const destroyUser = (user) => {
         </div>
     </AuthenticatedLayout>
 </template>
-

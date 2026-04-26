@@ -71,21 +71,21 @@ const destroyClassroom = (id) => {
     <AuthenticatedLayout>
         <template #header>
             <div>
-                <h2 class="text-xl font-semibold text-gray-800">Kelas</h2>
-                <p class="text-sm text-gray-500">CRUD dasar untuk data kelas dan wali kelas.</p>
+                <h2 class="text-xl font-semibold text-[var(--app-text)]">Kelas</h2>
+                <p class="text-sm text-[var(--app-text-muted)]">CRUD dasar untuk data kelas dan wali kelas.</p>
             </div>
         </template>
 
         <div class="py-8">
             <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[0.95fr,1.45fr] lg:px-8">
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">{{ editingId ? 'Edit Kelas' : 'Tambah Kelas' }}</h3>
+                <section class="theme-surface rounded-xl border p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">{{ editingId ? 'Edit Kelas' : 'Tambah Kelas' }}</h3>
                     <form class="mt-6 space-y-4" @submit.prevent="submit">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Institusi</label>
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Institusi</label>
                             <select
                                 v-model="form.institution_id"
-                                class="w-full rounded-lg border-gray-300 text-sm"
+                                class="theme-input w-full rounded-lg text-sm"
                                 :disabled="forcedInstitutionId !== null"
                             >
                                 <option v-for="institution in institutions" :key="institution.id" :value="institution.id">
@@ -95,27 +95,27 @@ const destroyClassroom = (id) => {
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Kode</label>
-                                <input v-model="form.code" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Kode</label>
+                                <input v-model="form.code" class="theme-input w-full rounded-lg text-sm" type="text" />
                             </div>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Nama</label>
-                                <input v-model="form.name" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Nama</label>
+                                <input v-model="form.name" class="theme-input w-full rounded-lg text-sm" type="text" />
                             </div>
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Level</label>
-                                <input v-model="form.level" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Level</label>
+                                <input v-model="form.level" class="theme-input w-full rounded-lg text-sm" type="text" />
                             </div>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Jurusan</label>
-                                <input v-model="form.major" class="w-full rounded-lg border-gray-300 text-sm" type="text" />
+                                <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Jurusan</label>
+                                <input v-model="form.major" class="theme-input w-full rounded-lg text-sm" type="text" />
                             </div>
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Wali Kelas</label>
-                            <select v-model="form.homeroom_teacher_user_id" class="w-full rounded-lg border-gray-300 text-sm">
+                            <label class="mb-1 block text-sm font-medium text-[var(--app-text-muted)]">Wali Kelas</label>
+                            <select v-model="form.homeroom_teacher_user_id" class="theme-input w-full rounded-lg text-sm">
                                 <option value="">Belum ditentukan</option>
                                 <option v-for="teacher in filteredTeachers" :key="teacher.id" :value="teacher.id">
                                     {{ teacher.name }}
@@ -123,22 +123,22 @@ const destroyClassroom = (id) => {
                             </select>
                         </div>
                         <div class="flex gap-3">
-                            <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+                            <button type="submit" class="theme-btn-primary rounded-lg px-4 py-2 text-sm font-medium">
                                 {{ editingId ? 'Simpan Perubahan' : 'Tambah Kelas' }}
                             </button>
-                            <button type="button" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700" @click="startCreate">
+                            <button type="button" class="theme-btn-secondary rounded-lg px-4 py-2 text-sm font-medium" @click="startCreate">
                                 Reset
                             </button>
                         </div>
                     </form>
                 </section>
 
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">Daftar Kelas</h3>
+                <section class="theme-surface rounded-xl border p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-[var(--app-text)]">Daftar Kelas</h3>
                     <div class="mt-4 overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <table class="min-w-full divide-y divide-[var(--app-border)] text-sm">
                             <thead>
-                                <tr class="text-left text-gray-500">
+                                <tr class="text-left text-[var(--app-text-muted)]">
                                     <th class="px-3 py-2 font-medium">Kode</th>
                                     <th class="px-3 py-2 font-medium">Nama</th>
                                     <th class="px-3 py-2 font-medium">Institusi</th>
@@ -146,21 +146,21 @@ const destroyClassroom = (id) => {
                                     <th class="px-3 py-2 font-medium">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
+                            <tbody class="divide-y divide-[var(--app-border)]">
                                 <tr v-for="classroom in classrooms" :key="classroom.id">
-                                    <td class="px-3 py-3 font-medium text-gray-900">{{ classroom.code }}</td>
-                                    <td class="px-3 py-3 text-gray-600">
+                                    <td class="px-3 py-3 font-medium text-[var(--app-text)]">{{ classroom.code }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text)]">
                                         <p>{{ classroom.name }}</p>
-                                        <p class="text-xs text-gray-500">{{ classroom.level || '-' }} / {{ classroom.major || '-' }}</p>
+                                        <p class="text-xs text-[var(--app-text-muted)]">{{ classroom.level || '-' }} / {{ classroom.major || '-' }}</p>
                                     </td>
-                                    <td class="px-3 py-3 text-gray-600">{{ classroom.institution_name }}</td>
-                                    <td class="px-3 py-3 text-gray-600">{{ classroom.homeroom_teacher_name || '-' }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text)]">{{ classroom.institution_name }}</td>
+                                    <td class="px-3 py-3 text-[var(--app-text)]">{{ classroom.homeroom_teacher_name || '-' }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex flex-wrap gap-2">
-                                            <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700" @click="editClassroom(classroom)">
+                                            <button type="button" class="theme-btn-secondary rounded-lg px-3 py-1.5 text-xs font-medium" @click="editClassroom(classroom)">
                                                 Edit
                                             </button>
-                                            <button type="button" class="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-700" @click="destroyClassroom(classroom.id)">
+                                            <button type="button" class="theme-btn-danger rounded-lg px-3 py-1.5 text-xs font-medium" @click="destroyClassroom(classroom.id)">
                                                 Hapus
                                             </button>
                                         </div>
