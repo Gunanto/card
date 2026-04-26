@@ -504,8 +504,28 @@ onMounted(() => {
     color: #94a3b8 !important;
 }
 
+.theme-dark .text-\[\#FF2D20\] {
+    color: #facc15 !important;
+}
+
+.theme-dark .bg-\[\#FF2D20\] {
+    background: linear-gradient(135deg, #fde047 0%, #facc15 58%, #eab308 100%) !important;
+    color: #0f172a !important;
+    border-color: rgba(250, 204, 21, 0.5) !important;
+}
+
+.theme-dark .bg-\[\#FF2D20\]:hover {
+    filter: brightness(0.97);
+    color: #0f172a !important;
+}
+
+.theme-dark .hover\:bg-\[\#e02a1d\]:hover {
+    background-color: #eab308 !important;
+    color: #0f172a !important;
+}
+
 .theme-dark .shadow-red-200 {
-    --tw-shadow-color: rgba(255, 45, 32, 0.3) !important;
+    --tw-shadow-color: rgba(250, 204, 21, 0.35) !important;
 }
 
 .theme-dark footer {
